@@ -47,4 +47,19 @@ if (!parsed.success) {
   process.exit(1);
 }
 
+// Defensa en profundidad: si alguien arranca en producción con los
+// placeholders dev-only del .env.example, abortar inmediatamente.
+if (parsed.data.NODE_ENV === 'production') {
+  const inseguros = [];
+  if (parsed.data.JWT_SECRET.startsWith('dev-only-')) inseguros.push('JWT_SECRET');
+  if (parsed.data.N8N_INGEST_TOKEN.startsWith('dev-only-')) inseguros.push('N8N_INGEST_TOKEN');
+  if (inseguros.length) {
+    console.error(
+      `[FATAL] Se detectaron secretos dev-only en producción: ${inseguros.join(', ')}. ` +
+        'Generá valores nuevos (32+ caracteres aleatorios) y reiniciá.'
+    );
+    process.exit(1);
+  }
+}
+
 export const env = Object.freeze(parsed.data);

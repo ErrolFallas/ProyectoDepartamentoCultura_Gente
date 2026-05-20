@@ -139,16 +139,35 @@ async function upsertSurveyRun() {
   });
 }
 
-async function upsertAdmin() {
-  const email = 'admin@pulsework.local';
-  if (await usersRepo.findByEmail(email)) return;
-  await usersRepo.insert({
-    email,
-    password_hash: await hashPassword('PulseWork#2024'),
+const USUARIOS_BOOTSTRAP = [
+  {
+    email: 'admin@pulsework.local',
+    password: 'PulseWork#2024',
     nombre: 'Administrador Cultura y Gente',
     role: 'ADMIN'
-  });
-  logger.warn({ email, defaultPassword: 'PulseWork#2024' }, 'Usuario admin creado. CAMBIAR contraseña.');
+  },
+  {
+    email: 'analista@pulsework.local',
+    password: 'Analista#2024',
+    nombre: 'Analista Cultura y Gente',
+    role: 'ANALISTA'
+  }
+];
+
+async function upsertUsuarios() {
+  for (const u of USUARIOS_BOOTSTRAP) {
+    if (await usersRepo.findByEmail(u.email)) continue;
+    await usersRepo.insert({
+      email: u.email,
+      password_hash: await hashPassword(u.password),
+      nombre: u.nombre,
+      role: u.role
+    });
+    logger.warn(
+      { email: u.email, role: u.role, defaultPassword: u.password },
+      'Usuario bootstrap creado. CAMBIAR contraseña tras primer login.'
+    );
+  }
 }
 
 async function run() {
@@ -156,7 +175,7 @@ async function run() {
     await upsertDimensions();
     await upsertScales();
     await upsertSurveyRun();
-    await upsertAdmin();
+    await upsertUsuarios();
   });
   logger.info('Seed base completado.');
 }

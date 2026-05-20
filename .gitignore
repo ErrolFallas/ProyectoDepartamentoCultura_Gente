@@ -1,6 +1,17 @@
 node_modules/
+
+# === Secretos: NUNCA subir ===
 .env
-.env.local
+.env.*
+!.env.example
+backend/.env
+frontend/.env
+frontend/.env.local
+*.pem
+*.key
+*.p12
+secrets/
+
 *.log
 dist/
 build/

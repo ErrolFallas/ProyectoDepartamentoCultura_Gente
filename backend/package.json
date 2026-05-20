@@ -10,6 +10,7 @@
     "migrate": "node scripts/migrate.js",
     "seed": "node scripts/seed.js",
     "seed:catalog": "node scripts/import-catalog.js",
+    "seed:demo": "node scripts/seed-respuestas-demo.js",
     "lint": "echo \"(lint pendiente)\" && exit 0"
   },
   "dependencies": {

@@ -9,6 +9,16 @@ genera presentaciones `.pptx` editables.
 > **Cimientos**, **Ingesta**, **Scoring**, **Agregación** y **Paneles**.
 > Generación `.pptx` (Fase 6) se construye sobre estas bases.
 
+## ¿Acabás de clonar? Empezá por acá
+
+- 📖 **[INSTALACION.md](./INSTALACION.md)** — Pasos completos: requisitos,
+  cómo conseguir las APIs (Gemini, Microsoft 365), `.env`, MySQL, migración,
+  seed, comandos de backend/frontend, configuración de n8n y solución de
+  problemas comunes.
+- 🧭 **[FUNCIONALIDADES.md](./FUNCIONALIDADES.md)** — Qué hace cada uno de
+  los 6 paneles, qué preguntas responde, qué endpoints consume y el
+  potencial a futuro por sección.
+
 ## Reglas innegociables
 
 1. **Anonimato estricto.** El sistema nunca identifica a la persona; solo

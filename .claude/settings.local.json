@@ -11,7 +11,10 @@
       "Bash(node -e ' *)",
       "Bash(cp .env.example .env.smoke)",
       "Bash(node smoke-routes.mjs)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(node --check scripts/seed.js)",
+      "Bash(node --check scripts/seed-respuestas-demo.js)",
+      "Bash(node --check src/config/env.js)"
     ]
   }
 }
