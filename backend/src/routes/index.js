@@ -10,6 +10,8 @@ import rankingsRoutes from './rankings.routes.js';
 import alertsRoutes from './alerts.routes.js';
 import temporalRoutes from './temporal.routes.js';
 import orgRoutes from './org.routes.js';
+import presentationRoutes from './presentation.routes.js';
+import assistantRoutes from './assistant.routes.js';
 
 const router = Router();
 
@@ -19,7 +21,7 @@ router.get('/health', async (_req, res) => {
 });
 
 router.use('/auth', authRoutes);
-router.use('/', ingestRoutes); // /responses/ingest y /responses/ingest/batch
+router.use('/responses', ingestRoutes); // POST /responses/ingest[/batch]
 router.use('/catalog', catalogRoutes);
 router.use('/classifications', classificationsRoutes);
 router.use('/aggregates', aggregatesRoutes);
@@ -27,6 +29,8 @@ router.use('/snapshots', snapshotsRoutes);
 router.use('/rankings', rankingsRoutes);
 router.use('/alerts', alertsRoutes);
 router.use('/temporal', temporalRoutes);
-router.use('/', orgRoutes); // /companies, /companies/:id/departments
+router.use('/presentation', presentationRoutes);
+router.use('/assistant', assistantRoutes);
+router.use('/', orgRoutes); // GET /companies, /companies/:id/departments
 
 export default router;

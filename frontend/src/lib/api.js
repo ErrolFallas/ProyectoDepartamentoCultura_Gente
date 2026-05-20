@@ -116,5 +116,39 @@ export const api = {
 
   // Organización
   listCompanies: () => request('/companies'),
-  listDepartments: (companyId) => request(`/companies/${companyId}/departments`)
+  listDepartments: (companyId) => request(`/companies/${companyId}/departments`),
+
+  // Asistente IA (Gemini con function calling)
+  assistantCapabilities: () => request('/assistant/capabilities'),
+  assistantAsk: (messages) => request('/assistant/ask', { method: 'POST', body: { messages } }),
+
+  // Presentación (Fase 6)
+  presentationPreview: (query) => request('/presentation/preview', { query }),
+  presentationDownload: async ({ scope, scope_id, periodo }) => {
+    const token = tokenStore.get();
+    const res = await fetch('/api/presentation/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ scope, scope_id, periodo })
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      let msg = res.statusText;
+      try { msg = JSON.parse(text)?.error?.message ?? msg; } catch { /* keep statusText */ }
+      throw new ApiError(msg, { status: res.status });
+    }
+    const blob = await res.blob();
+    const filename = parseFilename(res.headers.get('Content-Disposition'))
+      ?? `clima_${scope_id}_${periodo}.pptx`;
+    return { blob, filename };
+  }
 };
+
+function parseFilename(header) {
+  if (!header) return null;
+  const m = header.match(/filename="([^"]+)"/);
+  return m ? m[1] : null;
+}

@@ -14,7 +14,21 @@
       "Bash(npx vite *)",
       "Bash(node --check scripts/seed.js)",
       "Bash(node --check scripts/seed-respuestas-demo.js)",
-      "Bash(node --check src/config/env.js)"
+      "Bash(node --check src/config/env.js)",
+      "PowerShell(Get-Service *)",
+      "Bash(npm run *)",
+      "Bash(npm --workspace backend run seed:catalog)",
+      "Bash(npm --workspace backend run seed:demo)",
+      "Bash(npm --workspace backend run seed:aggregates)",
+      "Bash(curl -sf http://localhost:3000/api/health)",
+      "Bash(curl -s http://localhost:3000/api/health)",
+      "Bash(curl -s -X POST http://localhost:3000/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@pulsework.local\",\"password\":\"PulseWork#2024\"}')",
+      "Bash(node -e \"let s=''; process.stdin.on\\('data',d=>s+=d\\); process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(s\\); console.log\\('Configurado:', j.configurado\\); console.log\\('Modelo:', j.modelo\\); console.log\\('Herramientas disponibles:', j.cantidadHerramientas\\);}\\)\")",
+      "Bash(node -e \"let s=''; process.stdin.on\\('data',d=>s+=d\\); process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(s\\); console.log\\('Respuesta:', j.respuesta\\); console.log\\(''\\); console.log\\('Herramientas usadas:', j.toolCalls?.length\\); j.toolCalls?.forEach\\(\\(tc,i\\)=>console.log\\('  '+\\(i+1\\)+'.', tc.name, JSON.stringify\\(tc.args\\)\\)\\);}\\)\")",
+      "Bash(node -e \"let s=''; process.stdin.on\\('data',d=>s+=d\\); process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(s\\); console.log\\('--- Respuesta ---'\\); console.log\\(j.respuesta || \\('ERROR: '+JSON.stringify\\(j\\)\\)\\); console.log\\(''\\); console.log\\('--- Herramientas usadas: '+ \\(j.toolCalls?.length||0\\)+' ---'\\); j.toolCalls?.forEach\\(\\(tc,i\\)=>console.log\\('  '+\\(i+1\\)+'.', tc.name, JSON.stringify\\(tc.args\\).slice\\(0,80\\)\\)\\);}\\)\")",
+      "Bash(node --check src/services/assistant/tools-catalog.js)",
+      "Bash(node --check src/services/assistant/assistant.service.js)",
+      "Bash(node -e \"let s=''; process.stdin.on\\('data',d=>s+=d\\); process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(s\\); if\\(j.error\\){console.log\\('ERROR:',j.error.message\\);}else{console.log\\('Nombre:',j.displayName\\);console.log\\('Soporta tools:', \\(j.supportedGenerationMethods||[]\\).includes\\('generateContent'\\)\\);console.log\\('Input tokens:', j.inputTokenLimit\\);}}\\)\")"
     ]
   }
 }

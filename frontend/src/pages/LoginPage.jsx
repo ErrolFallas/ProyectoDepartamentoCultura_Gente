@@ -39,12 +39,13 @@ export function LoginPage() {
           <h2 className="text-2xl font-semibold">Garnier PulseWork</h2>
           <p className="text-ink-300 text-sm leading-relaxed">
             Plataforma de bienestar y clima organizacional. Procesa
-            respuestas anónimas, identifica focos rojos y sugiere visitas a
-            departamentos sin nunca identificar a la persona.
+            respuestas anónimas, identifica equipos que requieren atención y
+            sugiere visitas a departamentos preservando siempre el anonimato
+            del personal.
           </p>
           <ul className="text-xs text-ink-400 space-y-1">
-            <li>· Anonimato estructural</li>
-            <li>· Polaridad confirmada por humano</li>
+            <li>· Anonimato estructural del personal</li>
+            <li>· Polaridad de preguntas confirmada por una persona</li>
             <li>· Snapshots mensuales inmutables</li>
           </ul>
         </div>
@@ -55,7 +56,7 @@ export function LoginPage() {
         <form onSubmit={handleSubmit} className="card w-full max-w-sm p-8 space-y-4">
           <header>
             <h1 className="text-xl font-semibold">Iniciar sesión</h1>
-            <p className="text-sm text-ink-500">Acceso exclusivo RRHH</p>
+            <p className="text-sm text-ink-500">Acceso exclusivo para el Departamento de Cultura y Gente</p>
           </header>
 
           <label className="block">
@@ -94,8 +95,8 @@ export function LoginPage() {
           </button>
 
           <p className="text-[11px] text-ink-400 text-center">
-            ¿Es tu primera vez? Usa <strong>admin@pulsework.local</strong> /
-            <strong> PulseWork#2024</strong> y cámbiala desde el catálogo.
+            Si es su primer acceso, utilice las credenciales iniciales y
+            solicite el cambio de contraseña al administrador.
           </p>
         </form>
       </section>

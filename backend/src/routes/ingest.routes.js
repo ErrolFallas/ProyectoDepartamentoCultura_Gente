@@ -7,9 +7,20 @@ import { ingestBatchSchema, ingestSingleSchema } from '../validators/ingest.sche
 const router = Router();
 
 // n8n sólo puede llegar aquí. NO escribe en MySQL ni llama a Gemini.
-router.use(requireIngestToken);
+// requireIngestToken se aplica por ruta (no con router.use) para no
+// contaminar otras rutas cuando este sub-router se monta en '/'.
+router.post(
+  '/ingest',
+  requireIngestToken,
+  validate({ body: ingestSingleSchema }),
+  ingestController.ingestOne
+);
 
-router.post('/responses/ingest', validate({ body: ingestSingleSchema }), ingestController.ingestOne);
-router.post('/responses/ingest/batch', validate({ body: ingestBatchSchema }), ingestController.ingestMany);
+router.post(
+  '/ingest/batch',
+  requireIngestToken,
+  validate({ body: ingestBatchSchema }),
+  ingestController.ingestMany
+);
 
 export default router;

@@ -63,7 +63,7 @@ Tres ideas clave del producto:
                   │  1. Hash anti-duplicados (SHA256)  │
                   │  2. ¿Pregunta conocida?            │
                   │     · sí → puntuar                 │
-                  │     · no → Gemini sugiere polaridad│
+                  │     · no → la IA sugiere polaridad│
                   │             → estado PENDIENTE     │
                   │  3. Normalizar a 0-100 + polaridad │
                   │  4. Clasificar POSITIVO/NEUTRO/NEG │
@@ -139,7 +139,7 @@ rojo, cuántos en amarillo, y la lista priorizada por % negativo.
 
 - Notificaciones por correo cuando un nuevo depto cae a rojo.
 - Botón "agendar visita" que cree un evento en Outlook/Google Calendar.
-- Resumen narrativo generado por Gemini ("este mes 3 deptos
+- Resumen narrativo generado por la IA ("este mes 3 deptos
   retrocedieron…").
 
 ---
@@ -277,7 +277,7 @@ consecutivos en alerta).
 #### Qué hace
 
 Bandeja de revisión para preguntas que Microsoft Forms aporta y que
-Gemini todavía no validó humanamente. Por cada pregunta nueva, muestra
+la IA todavía no validó humanamente. Por cada pregunta nueva, muestra
 la sugerencia de la IA con su razonamiento y confianza, y permite a
 RRHH **confirmar**, **corregir** o **rechazar**.
 
@@ -315,7 +315,7 @@ oficialmente clasificada.
   posibilidad de revertir.
 - Bandeja por dimensión (mostrar solo preguntas pendientes de la
   dimensión "Liderazgo").
-- Sugerir ediciones del texto de la pregunta cuando Gemini detecta
+- Sugerir ediciones del texto de la pregunta cuando la IA detecta
   ambigüedad.
 
 ---
@@ -324,14 +324,38 @@ oficialmente clasificada.
 
 **Ruta:** `/presentacion`
 **Panel del plan:** #6.
-**Estado:** **stub UI — Fase 6 pendiente.**
+**Estado:** **Implementado.**
 
-#### Qué hará
+#### Qué hace
 
-Generar un `.pptx` editable con la estructura del informe de clima
-existente: portada, resumen ejecutivo, bloques por dimensión con tabla
-de % por opción ("el 73 % del personal indica que…"), mejores y peores
-resultados, y temas detectados por Gemini en respuestas abiertas.
+Genera un `.pptx` editable del período seleccionado con la siguiente
+estructura de láminas:
+
+1. **Portada** — Nombre y tipo de entidad (Empresa o Departamento),
+   empresa padre si aplica, período.
+2. **Encuestas aplicadas** — Total de respuestas anónimas recibidas y
+   nota explícita de anonimato.
+3. **Resumen ejecutivo** — KPIs de % positivo / negativo, posición en
+   ranking, nivel del semáforo y un párrafo narrativo automático.
+4. **Bloques por dimensión** — Una o más láminas con tabla por dimensión
+   mostrando preguntas, respuestas, % positivo y % negativo ponderados.
+5. **Mejores resultados** — Top 5 preguntas con mayor % positivo.
+6. **Áreas de mejora** — Top 5 preguntas con mayor % negativo.
+7. **Puntos de mejora (IA)** — Temas recurrentes detectados en
+   respuestas de texto abierto, con distribución de tono.
+8. **Cierre** — Notas de uso y recordatorio de editabilidad.
+
+#### Endpoints consumidos
+
+- `GET /api/presentation/preview` — Vista previa estructural sin generar.
+- `POST /api/presentation/generate` — Genera y descarga el archivo.
+
+#### Flujo de la UI
+
+1. Elegí tipo (🏢 Empresa o 👥 Departamento), entidad y período.
+2. Tocá **Ver vista previa** para inspeccionar qué bloques se incluirán.
+3. Tocá **Generar y descargar .pptx**. El archivo se descarga con nombre
+   `clima_<entidad>_<periodo>.pptx`.
 
 #### Por qué `.pptx` y no PDF
 
@@ -339,18 +363,22 @@ RRHH debe poder **corregir o quitar información sensible al instante**
 antes de presentar. Un PDF no permite eso con facilidad; un `.pptx`
 abierto en PowerPoint sí.
 
-#### Plantilla maestra
+#### Anonimato en el informe
 
-La idea es que RRHH provea un `.pptx` con marcadores (estilo "machote")
-y PptxGenJS reemplace los placeholders con datos del período
-seleccionado. El branding lo controla RRHH sin tocar código.
+- Los departamentos por debajo del umbral mínimo de respuestas se
+  omiten automáticamente del bloque por dimensión.
+- La sección de temas IA aclara explícitamente que la IA solo recibe
+  el texto de la respuesta abierta: nunca empresa, departamento ni
+  identidad.
 
 #### Potencial
 
+- Soportar plantilla maestra `.pptx` provista por RRHH (modo "machote"
+  con placeholders, ya previsto en el plan).
 - Modo "presentación ejecutiva" más conciso vs "informe detallado".
 - Exportar también a Google Slides vía API.
-- Generar narrativa con Gemini: "este trimestre los puntos de mejora
-  son X, Y, Z" como párrafo introductorio.
+- Generar narrativa con IA: "este trimestre los puntos de mejora son
+  X, Y, Z" como párrafo introductorio.
 
 ---
 
@@ -383,12 +411,12 @@ Más allá de la Fase 6:
   benchmarks del sector.
 
 ### Inteligencia artificial
-- **Sugerencias de intervención:** Gemini propone acciones específicas
+- **Sugerencias de intervención:** la IA propone acciones específicas
   según los temas detectados en texto abierto ("considerar capacitación
   en gestión del estrés porque 18 menciones lo señalan").
 - **Detección de temas emergentes:** clustering de respuestas abiertas
   para identificar problemas nuevos antes de que un % los haga visibles.
-- **Validación cruzada:** si Gemini sugiere una polaridad con confianza
+- **Validación cruzada:** si la IA sugiere una polaridad con confianza
   baja, mostrar 2-3 ejemplos de respuestas reales para ayudar a RRHH a
   decidir.
 

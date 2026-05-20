@@ -5,9 +5,9 @@ Cultura y Gente**. Procesa respuestas anónimas de Microsoft Forms, puntúa
 emociones, compara empresas y departamentos, opera un semáforo de alertas y
 genera presentaciones `.pptx` editables.
 
-> Este monorepo implementa las **Fases 1–5** del Plan Maestro v1.0:
-> **Cimientos**, **Ingesta**, **Scoring**, **Agregación** y **Paneles**.
-> Generación `.pptx` (Fase 6) se construye sobre estas bases.
+> Este monorepo implementa las **Fases 1–6** del Plan Maestro v1.0:
+> **Cimientos**, **Ingesta**, **Scoring**, **Agregación**, **Paneles** y
+> **Generador `.pptx`**.
 
 ## ¿Acabás de clonar? Empezá por acá
 
@@ -24,13 +24,13 @@ genera presentaciones `.pptx` editables.
 1. **Anonimato estricto.** El sistema nunca identifica a la persona; solo
    empresa + departamento. Departamentos con menos de
    `MIN_RESPUESTAS_DEPARTAMENTO` (5 por defecto) **no se exponen aislados**.
-2. **Polaridad humana.** Gemini sugiere; RRHH confirma. Mientras una
+2. **Polaridad humana.** La IA sugiere; RRHH confirma. Mientras una
    pregunta no esté `CONFIRMADA`, sus respuestas quedan `EN_ESPERA` y no
    contaminan el semáforo.
 3. **Separación de responsabilidades.** n8n solo ingiere. Nunca escribe en
-   MySQL, nunca llama a Gemini, nunca genera presentaciones.
+   MySQL, nunca llama a la IA, nunca genera presentaciones.
 4. **Tecnología fija.** Node.js + Express + MySQL nativo + React. Sin PHP,
-   sin Docker, sin phpMyAdmin, sin otras IAs.
+   sin Docker, sin phpMyAdmin. La IA es Gemini (Google AI Studio).
 
 ## Stack
 
@@ -42,16 +42,16 @@ genera presentaciones `.pptx` editables.
 | IA | Gemini (Google AI Studio) con stub local si no hay clave |
 | Ingesta | n8n vía `npx`, sin Docker |
 | Frontend | React 18 + Vite + Tailwind + Recharts |
-| Salida | PptxGenJS (`.pptx` editable, pendiente) |
+| Salida | PptxGenJS (`.pptx` editable) |
 
 ## Estructura
 
 ```
 proyecto_Departamento_Cultura_Gente/
-├── backend/        # API Node.js
-├── frontend/       # SPA React (pendiente - Fase 5)
-├── db/migrations/  # Schema SQL
-├── n8n/workflows/  # Workflows exportables
+├── backend/        # API Node.js (29 endpoints)
+├── frontend/       # SPA React (6 paneles)
+├── db/migrations/  # Schema SQL (14 tablas)
+├── n8n/workflows/  # 3 workflows exportables
 └── .env.example    # Variables de entorno
 ```
 
@@ -149,7 +149,7 @@ Microsoft OneDrive. Ver `n8n/README.md`.
 | GET  | `/api/catalog/dimensions` | JWT | Listar dimensiones |
 | GET  | `/api/catalog/scales` | JWT | Listar escalas |
 | GET  | `/api/catalog/questions/pending` | JWT | Preguntas `PENDIENTE_REVISION` |
-| GET  | `/api/classifications` | JWT | Sugerencias de Gemini pendientes |
+| GET  | `/api/classifications` | JWT | Sugerencias de IA pendientes |
 | POST | `/api/classifications/:id/confirm` | JWT | Confirmar / corregir / rechazar polaridad |
 
 ### Fase 4 — Agregación, snapshots, rankings y semáforo
@@ -247,7 +247,7 @@ según el Plan Maestro. Comparte tokens visuales corporativos (`brand`,
 | Semáforo | `/semaforo` | `GET /alerts`, `POST /alerts/recalculate`, `POST /alerts/:id/atender` |
 | Tendencias | `/tendencias` | `GET /snapshots/history`, `GET /temporal/day-of-week`, `GET /temporal/cronicidad` |
 | Catálogo (revisión) | `/catalogo` | `GET /classifications`, `POST /classifications/:id/confirm` |
-| Presentación (stub Fase 6) | `/presentacion` | — |
+| Presentación (Fase 6) | `/presentacion` | `GET /presentation/preview`, `POST /presentation/generate` |
 
 Login: `POST /auth/login`. La sesión se persiste en `localStorage` y se
 restaura automáticamente al recargar. `ProtectedRoute` redirige a `/login`
@@ -278,11 +278,19 @@ El backend acepta cualquier `http://localhost:PORT` y
 `Authorization`, `X-Ingest-Token`. En producción ajustar la lista blanca
 o servir el SPA con same-origin detrás de un proxy.
 
-## Qué falta (próximas fases)
+## Fase 6 — Generador `.pptx`
 
-| Fase | Faltante |
-| --- | --- |
-| 6 — Presentación | Generador `.pptx` con plantilla maestra (PptxGenJS) |
+| Método | Ruta | Auth | Descripción |
+| --- | --- | --- | --- |
+| GET  | `/api/presentation/preview?scope&scope_id&periodo` | JWT | Devuelve cuántos bloques incluiría el informe (sin generarlo) |
+| POST | `/api/presentation/generate` | JWT | Construye y descarga el `.pptx` editable |
+
+El `.pptx` incluye: portada con tipo de entidad explícito, encuestas
+aplicadas, resumen ejecutivo con KPIs y semáforo, una o más láminas con
+tabla por dimensión, mejores resultados, áreas de mejora, y temas
+detectados por la IA en texto abierto. El archivo es editable: RRHH puede
+ajustar branding, ocultar contenido sensible o agregar notas antes de
+presentar.
 
 ## Documentación de referencia
 

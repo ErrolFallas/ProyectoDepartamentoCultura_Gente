@@ -2,16 +2,26 @@ import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
 
 /**
- * Selector de entidad (empresa o departamento) usado por el Comparador
- * y otros paneles. Si scope = DEPARTMENT, primero filtra por empresa.
+ * Selector de entidad (empresa o departamento) usado por varios paneles.
+ * Cuando scope = DEPARTMENT muestra dos selects (empresa → departamento)
+ * y la cuadrícula interna ocupa el ancho disponible.
  *
  * Props:
  *  - scope: 'COMPANY' | 'DEPARTMENT'
  *  - value: número o null
  *  - onChange: (id, meta) => void
- *  - empresaIdInicial: si scope=DEPARTMENT, empresa a filtrar
+ *  - label: rótulo del select principal
+ *  - className: clases adicionales (útil para `lg:col-span-2` en
+ *    cuadrículas externas, manteniendo alineación con los otros inputs)
  */
-export function ScopeSelector({ scope, value, onChange, empresaIdInicial = null, label }) {
+export function ScopeSelector({
+  scope,
+  value,
+  onChange,
+  empresaIdInicial = null,
+  label,
+  className = ''
+}) {
   const [companies, setCompanies] = useState([]);
   const [companyId, setCompanyId] = useState(empresaIdInicial);
   const [departments, setDepartments] = useState([]);
@@ -27,7 +37,7 @@ export function ScopeSelector({ scope, value, onChange, empresaIdInicial = null,
 
   if (scope === 'COMPANY') {
     return (
-      <label className="block">
+      <label className={`block ${className}`}>
         <span className="label">{label ?? 'Empresa'}</span>
         <select
           className="input"
@@ -46,8 +56,8 @@ export function ScopeSelector({ scope, value, onChange, empresaIdInicial = null,
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2">
-      <label className="block">
+    <div className={`grid grid-cols-2 gap-2 ${className}`}>
+      <label className="block min-w-0">
         <span className="label">Empresa</span>
         <select
           className="input"
@@ -57,11 +67,11 @@ export function ScopeSelector({ scope, value, onChange, empresaIdInicial = null,
             onChange(null, null);
           }}
         >
-          <option value="">—</option>
+          <option value="">— Seleccionar —</option>
           {companies.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
         </select>
       </label>
-      <label className="block">
+      <label className="block min-w-0">
         <span className="label">{label ?? 'Departamento'}</span>
         <select
           className="input"
@@ -73,7 +83,7 @@ export function ScopeSelector({ scope, value, onChange, empresaIdInicial = null,
             onChange(id, meta);
           }}
         >
-          <option value="">—</option>
+          <option value="">— Seleccionar —</option>
           {departments.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
         </select>
       </label>

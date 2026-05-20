@@ -37,9 +37,17 @@ export function CatalogPage() {
   return (
     <>
       <PageHeader
-        title="Catálogo de preguntas"
-        description="Bandeja de polaridad sugerida por Gemini. RRHH confirma o corrige; las respuestas en espera se reprocesan automáticamente."
+        title="Catálogo de preguntas — Revisión de polaridad"
+        description="Cuando llega una pregunta nueva desde la encuesta, la IA sugiere si la polaridad es DIRECTA (un número alto significa positivo) o INVERSA (alto significa negativo). Aquí Cultura y Gente confirma o corrige antes de que esa pregunta empiece a puntuar. Las respuestas a esa pregunta se mantienen en espera hasta que la confirmes."
       />
+
+      <Card title="¿Qué se envía a la IA?" subtitle="Por transparencia y privacidad" className="mb-4">
+        <ul className="text-sm text-ink-700 space-y-1.5 list-disc pl-5">
+          <li>Solo el <strong>texto de la pregunta</strong> y el tipo de escala (Likert, Frecuencia, etc.).</li>
+          <li>Nunca se envía la empresa, el departamento ni respuestas concretas.</li>
+          <li>La sugerencia es siempre revisable: el sistema no aplica polaridad sin confirmación humana.</li>
+        </ul>
+      </Card>
 
       {feedback && (
         <div className="mb-4 text-sm bg-brand-50 text-brand-700 px-3 py-2 rounded">{feedback}</div>
@@ -61,8 +69,8 @@ export function CatalogPage() {
         </div>
       ) : (
         <EmptyState
-          title="Bandeja vacía"
-          description="No hay preguntas pendientes de revisión. ¡Buen trabajo!"
+          title="Bandeja sin pendientes"
+          description="No hay preguntas pendientes de revisión en este momento."
         />
       ))}
     </>
@@ -71,18 +79,29 @@ export function CatalogPage() {
 
 function ClassificationCard({ item, busy, onDecidir }) {
   const sugerida = item.polaridad_sugerida;
+  const explicaPolaridad = {
+    DIRECTA: 'Un número alto (ej. "Totalmente de acuerdo") indica emoción positiva.',
+    INVERSA: 'Un número alto (ej. "Siempre") indica emoción negativa.',
+    NEUTRA: 'Pregunta demográfica — no puntúa, solo segmenta.'
+  };
   return (
     <Card>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <div className="text-xs uppercase text-ink-500 tracking-wide mb-1">
-            Pregunta · {item.dimension_sugerida ?? 'sin dimensión'}
+            Pregunta pendiente · dimensión sugerida: {item.dimension_sugerida ?? 'sin asignar'}
           </div>
           <div className="text-base font-medium text-ink-900">{item.texto_pregunta}</div>
-          <div className="mt-3 text-xs text-ink-600">
-            Gemini sugiere <strong>{sugerida}</strong>
-            {item.confianza !== null && <> ({pct(Number(item.confianza) * 100, 0)} confianza)</>}
-            {item.razon && <em className="block text-ink-500 mt-1">"{item.razon}"</em>}
+          <div className="mt-3 text-xs text-ink-700 bg-ink-50 rounded p-2.5 border border-ink-100">
+            <div>
+              La <strong>IA</strong> sugiere polaridad{' '}
+              <span className="pill bg-brand-50 text-brand-700">{sugerida}</span>
+              {item.confianza !== null && (
+                <span className="text-ink-500"> · {pct(Number(item.confianza) * 100, 0)} de confianza</span>
+              )}
+            </div>
+            <div className="mt-1 text-ink-600">{explicaPolaridad[sugerida]}</div>
+            {item.razon && <em className="block text-ink-500 mt-1">Razón aportada: "{item.razon}"</em>}
           </div>
         </div>
 

@@ -9,6 +9,7 @@ import { AlertsPage } from './pages/AlertsPage.jsx';
 import { TrendsPage } from './pages/TrendsPage.jsx';
 import { CatalogPage } from './pages/CatalogPage.jsx';
 import { PresentationPage } from './pages/PresentationPage.jsx';
+import { AssistantPage } from './pages/AssistantPage.jsx';
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="tendencias" element={<TrendsPage />} />
             <Route path="catalogo" element={<CatalogPage />} />
             <Route path="presentacion" element={<PresentationPage />} />
+            <Route path="asistente" element={<AssistantPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

@@ -53,8 +53,8 @@ export function AlertsPage() {
   return (
     <>
       <PageHeader
-        title="Semáforo de alertas"
-        description="Departamentos ordenados por % de respuestas negativas. Respeta el umbral mínimo de respuestas para no exponer individuos."
+        title="Semáforo de alertas por departamento"
+        description="Cada fila representa un equipo (👥) y su empresa (🏢). El nivel se calcula a partir del % de personal con tono negativo: VERDE (< 40%), AMARILLO (40–75%), ROJO (≥ 75% → requiere visita). Departamentos con muy pocas respuestas se omiten para proteger el anonimato."
         actions={
           <button onClick={recalcular} className="btn-secondary" disabled={busy}>
             {busy ? 'Recalculando…' : 'Recalcular semáforo'}
@@ -62,24 +62,24 @@ export function AlertsPage() {
         }
       />
 
-      <Card className="mb-6">
+      <Card title="Filtros" subtitle="Acotá la lista por período, nivel y estado de atención." className="mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <PeriodPicker value={periodo} onChange={setPeriodo} />
           <label className="block">
-            <span className="label">Nivel</span>
+            <span className="label">Nivel del semáforo</span>
             <select className="input" value={nivel} onChange={(e) => setNivel(e.target.value)}>
-              <option value="">Todos</option>
-              <option value="ROJO">Rojo</option>
-              <option value="AMARILLO">Amarillo</option>
-              <option value="VERDE">Verde</option>
+              <option value="">Todos los niveles</option>
+              <option value="ROJO">Solo ROJO (intervención urgente)</option>
+              <option value="AMARILLO">Solo AMARILLO (observación)</option>
+              <option value="VERDE">Solo VERDE (estable)</option>
             </select>
           </label>
           <label className="block">
-            <span className="label">Atendida</span>
+            <span className="label">Estado de atención</span>
             <select className="input" value={atendida} onChange={(e) => setAtendida(e.target.value)}>
-              <option value="">Todas</option>
-              <option value="false">Pendientes</option>
-              <option value="true">Atendidas</option>
+              <option value="">Todas las alertas</option>
+              <option value="false">Pendientes de visita</option>
+              <option value="true">Ya atendidas por Cultura y Gente</option>
             </select>
           </label>
         </div>
@@ -92,13 +92,16 @@ export function AlertsPage() {
       <ErrorBox error={error} onRetry={reload} />
 
       {data && (data.items.length ? (
-        <Card title={`${data.items.length} departamento(s)`}>
+        <Card
+          title={`${data.items.length} departamento(s) en la lista`}
+          subtitle="Cada departamento (👥) aparece con su empresa (🏢), su nivel de alerta y el % de personal con tono negativo."
+        >
           <AlertTable items={data.items} onAtender={atender} />
         </Card>
       ) : (
         <EmptyState
           title="Sin alertas para los filtros actuales"
-          description="Si esperabas ver alertas, presioná Recalcular semáforo para reprocesar el período."
+          description="Si esperaba ver alertas, oprima Recalcular semáforo para reprocesar el período seleccionado."
         />
       ))}
     </>
@@ -112,10 +115,10 @@ function AlertTable({ items, onAtender }) {
         <thead>
           <tr className="text-left text-xs uppercase text-ink-500 border-b border-ink-200">
             <th className="py-2">Nivel</th>
-            <th className="py-2">Departamento</th>
-            <th className="py-2">Empresa</th>
-            <th className="py-2 text-right">% Negativo</th>
-            <th className="py-2">Atendida</th>
+            <th className="py-2">👥 Departamento</th>
+            <th className="py-2">🏢 Empresa</th>
+            <th className="py-2 text-right">% Personal negativo</th>
+            <th className="py-2">¿Atendida?</th>
             <th className="py-2 text-right">Acciones</th>
           </tr>
         </thead>
@@ -128,13 +131,13 @@ function AlertTable({ items, onAtender }) {
               <td className="py-2 text-right font-medium">{pct(a.pct_negativo, 1)}</td>
               <td className="py-2 text-xs">
                 {a.atendida
-                  ? <span className="text-semaforo-verde">Sí · {dateShort(a.atendida_at)}</span>
-                  : <span className="text-ink-400">No</span>}
+                  ? <span className="text-semaforo-verde">Sí · visitada el {dateShort(a.atendida_at)}</span>
+                  : <span className="text-ink-400">Pendiente</span>}
               </td>
               <td className="py-2 text-right">
                 {!a.atendida && (
                   <button onClick={() => onAtender(a.id)} className="btn-secondary text-xs">
-                    Marcar atendida
+                    Marcar como atendida
                   </button>
                 )}
               </td>

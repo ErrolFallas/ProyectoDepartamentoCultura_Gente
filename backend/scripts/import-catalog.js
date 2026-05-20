@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import ExcelJS from 'exceljs';
 import { pool, withTransaction, closePool } from '../src/db/pool.js';
 import { dimensionsRepo } from '../src/repositories/dimensions.repo.js';
@@ -44,6 +45,10 @@ const DIM_CODIGOS = {
 
 function normalizar(text) {
   return (text ?? '').toString().trim();
+}
+
+function hashTexto(texto) {
+  return createHash('sha1').update(String(texto).trim().toLowerCase()).digest('hex').slice(0, 10);
 }
 
 function parseJsonColumn(value) {
@@ -149,22 +154,37 @@ async function importar({ filePath, sheetName }) {
         continue;
       }
 
-      const codigo = `clima2024_${String(item.numero).padStart(3, '0')}`;
-      const questionId = await questionsRepo.insert(
-        {
-          codigo,
-          texto: item.texto,
-          dimension_id: dimensionId,
-          subdimension: item.subdimension,
-          scale_id: escala.id,
-          polaridad,
-          // El instrumento existente es el catálogo de referencia → CONFIRMADA.
-          // Las nuevas preguntas que entren por Forms quedarán PENDIENTE_REVISION.
-          estado: 'CONFIRMADA',
-          origen: 'CATALOGO'
-        },
-        conn
-      );
+      // Código derivado del texto: idempotente entre corridas y libre
+      // de las colisiones que sufre el número del Excel (la hoja
+      // 'PROPUESTA 2024' a veces repite numeración entre secciones).
+      const codigo = `clima2024_${hashTexto(item.texto)}`;
+
+      let questionId;
+      try {
+        questionId = await questionsRepo.insert(
+          {
+            codigo,
+            texto: item.texto,
+            dimension_id: dimensionId,
+            subdimension: item.subdimension,
+            scale_id: escala.id,
+            polaridad,
+            // El instrumento existente es el catálogo de referencia → CONFIRMADA.
+            // Las nuevas preguntas que entren por Forms quedarán PENDIENTE_REVISION.
+            estado: 'CONFIRMADA',
+            origen: 'CATALOGO'
+          },
+          conn
+        );
+      } catch (err) {
+        // Defensa: si por alguna razón el hash colisiona (mismo texto
+        // ya cargado en otra dimensión), tratarlo como existente.
+        if (err.code === 'ER_DUP_ENTRY') {
+          existentes += 1;
+          continue;
+        }
+        throw err;
+      }
 
       const opcionesEscalaBase = parseJsonColumn(escala.opciones_json);
       const opciones = item.opciones.length
