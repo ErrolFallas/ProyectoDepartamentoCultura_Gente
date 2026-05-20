@@ -5,9 +5,9 @@ Cultura y Gente**. Procesa respuestas anónimas de Microsoft Forms, puntúa
 emociones, compara empresas y departamentos, opera un semáforo de alertas y
 genera presentaciones `.pptx` editables.
 
-> Este monorepo implementa las **Fases 1–4** del Plan Maestro v1.0:
-> **Cimientos**, **Ingesta**, **Scoring** y **Agregación**. Frontend
-> (Fase 5) y Generación `.pptx` (Fase 6) se construyen sobre estas bases.
+> Este monorepo implementa las **Fases 1–5** del Plan Maestro v1.0:
+> **Cimientos**, **Ingesta**, **Scoring**, **Agregación** y **Paneles**.
+> Generación `.pptx` (Fase 6) se construye sobre estas bases.
 
 ## Reglas innegociables
 
@@ -31,7 +31,7 @@ genera presentaciones `.pptx` editables.
 | Auth | JWT |
 | IA | Gemini (Google AI Studio) con stub local si no hay clave |
 | Ingesta | n8n vía `npx`, sin Docker |
-| Frontend | React + Tailwind + Recharts (pendiente) |
+| Frontend | React 18 + Vite + Tailwind + Recharts |
 | Salida | PptxGenJS (`.pptx` editable, pendiente) |
 
 ## Estructura
@@ -108,7 +108,14 @@ npm run dev:backend
 # http://localhost:3000/api/health
 ```
 
-### 7. Activar la ingesta n8n
+### 7. Levantar el frontend (SPA)
+
+```powershell
+npm run dev:frontend
+# http://localhost:5173  · proxy /api → backend
+```
+
+### 8. Activar la ingesta n8n
 
 ```powershell
 npm run n8n
@@ -217,11 +224,54 @@ src/
   `n_respuestas < MIN_RESPUESTAS_DEPARTAMENTO` se excluyen del ranking;
   para alertas, sencillamente no se genera la fila (no se expone).
 
+## Frontend (Fase 5)
+
+SPA en **React 18 + Vite + Tailwind + Recharts**, organizada en 6 paneles
+según el Plan Maestro. Comparte tokens visuales corporativos (`brand`,
+`semaforo`) y respeta la regla de anonimato en toda vista.
+
+| Panel | Ruta | Endpoints consumidos |
+| --- | --- | --- |
+| Asistente (focos del día) | `/` | `GET /alerts/focos` |
+| Comparador | `/comparador` | `GET /aggregates/compare`, `GET /rankings` |
+| Semáforo | `/semaforo` | `GET /alerts`, `POST /alerts/recalculate`, `POST /alerts/:id/atender` |
+| Tendencias | `/tendencias` | `GET /snapshots/history`, `GET /temporal/day-of-week`, `GET /temporal/cronicidad` |
+| Catálogo (revisión) | `/catalogo` | `GET /classifications`, `POST /classifications/:id/confirm` |
+| Presentación (stub Fase 6) | `/presentacion` | — |
+
+Login: `POST /auth/login`. La sesión se persiste en `localStorage` y se
+restaura automáticamente al recargar. `ProtectedRoute` redirige a `/login`
+si el token expiró.
+
+### Estructura del frontend
+
+```
+frontend/src/
+├── main.jsx, App.jsx, index.css
+├── lib/          api.js (fetch wrapper + JWT) + format.js
+├── context/      AuthContext (login/logout/restore)
+├── hooks/        useApi (loading/error/reload)
+├── routes/       ProtectedRoute
+├── components/
+│   ├── layout/   Sidebar, Topbar, Layout
+│   ├── common/   Card, PageHeader, Spinner, EmptyState, StatBadge,
+│   │             PeriodPicker, ScopeSelector, NivelPill, ErrorBox
+│   └── charts/   SentimentBars, TrendLine, DayBars (Recharts)
+└── pages/        Login, Dashboard, Comparator, Alerts, Trends,
+                  Catalog, Presentation
+```
+
+### CORS
+
+El backend acepta cualquier `http://localhost:PORT` y
+`http://127.0.0.1:PORT` para desarrollo. Headers expuestos:
+`Authorization`, `X-Ingest-Token`. En producción ajustar la lista blanca
+o servir el SPA con same-origin detrás de un proxy.
+
 ## Qué falta (próximas fases)
 
 | Fase | Faltante |
 | --- | --- |
-| 5 — Paneles | Comparador, Semáforo, Asistente, Tendencias, Catálogo UI |
 | 6 — Presentación | Generador `.pptx` con plantilla maestra (PptxGenJS) |
 
 ## Documentación de referencia

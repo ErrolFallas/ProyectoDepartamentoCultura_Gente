@@ -10,7 +10,8 @@
       "Bash(npm install *)",
       "Bash(node -e ' *)",
       "Bash(cp .env.example .env.smoke)",
-      "Bash(node smoke-routes.mjs)"
+      "Bash(node smoke-routes.mjs)",
+      "Bash(npx vite *)"
     ]
   }
 }

@@ -9,6 +9,7 @@ import snapshotsRoutes from './snapshots.routes.js';
 import rankingsRoutes from './rankings.routes.js';
 import alertsRoutes from './alerts.routes.js';
 import temporalRoutes from './temporal.routes.js';
+import orgRoutes from './org.routes.js';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use('/snapshots', snapshotsRoutes);
 router.use('/rankings', rankingsRoutes);
 router.use('/alerts', alertsRoutes);
 router.use('/temporal', temporalRoutes);
+router.use('/', orgRoutes); // /companies, /companies/:id/departments
 
 export default router;

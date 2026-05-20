@@ -1,5 +1,6 @@
 import express from 'express';
 import helmet from 'helmet';
+import cors from 'cors';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import routes from './routes/index.js';
@@ -11,6 +12,21 @@ export function buildApp() {
 
   app.disable('x-powered-by');
   app.use(helmet());
+  app.use(
+    cors({
+      // Para desarrollo: orígenes permitidos del SPA. En producción ajustar
+      // a un dominio específico o detrás de un proxy con same-origin.
+      origin: (origin, cb) => {
+        if (!origin) return cb(null, true);
+        const allow = [/^http:\/\/localhost:\d+$/, /^http:\/\/127\.0\.0\.1:\d+$/];
+        if (allow.some((rx) => rx.test(origin))) return cb(null, true);
+        return cb(new Error('CORS bloqueado'));
+      },
+      credentials: false,
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Ingest-Token'],
+      exposedHeaders: []
+    })
+  );
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ extended: false }));
   app.use(
