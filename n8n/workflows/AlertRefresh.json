@@ -1,0 +1,61 @@
+{
+  "name": "PulseWork - AlertRefresh",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 6 * * *" }
+          ]
+        }
+      },
+      "id": "trigger-cron-daily",
+      "name": "Cron diario 06:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 240]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Período actual en formato YYYY-MM (UTC).\nconst d = new Date();\nconst periodo = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;\nreturn [{ json: { periodo } }];"
+      },
+      "id": "build-periodo",
+      "name": "Período actual",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [480, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.BACKEND_BASE_URL}}/api/alerts/recalculate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Ingest-Token", "value": "={{$env.N8N_INGEST_TOKEN}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ periodo: $json.periodo }) }}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "post-recalc",
+      "name": "POST /alerts/recalculate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [720, 240]
+    }
+  ],
+  "connections": {
+    "Cron diario 06:00": {
+      "main": [[{ "node": "Período actual", "type": "main", "index": 0 }]]
+    },
+    "Período actual": {
+      "main": [[{ "node": "POST /alerts/recalculate", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}

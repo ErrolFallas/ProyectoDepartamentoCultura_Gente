@@ -1,0 +1,108 @@
+{
+  "name": "PulseWork - FormsIngest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 40
+            }
+          ]
+        }
+      },
+      "id": "trigger-schedule",
+      "name": "Schedule 40s",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 240]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "download",
+        "fileId": "={{$env.MS_DRIVE_ITEM_ID}}",
+        "binaryPropertyName": "data"
+      },
+      "id": "fetch-excel",
+      "name": "Descargar Excel (OneDrive)",
+      "type": "n8n-nodes-base.microsoftOneDrive",
+      "typeVersion": 1,
+      "position": [480, 240],
+      "credentials": {
+        "microsoftOneDriveOAuth2Api": {
+          "id": "TODO",
+          "name": "Microsoft OneDrive"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "fromFile",
+        "binaryPropertyName": "data",
+        "options": {
+          "headerRow": true,
+          "readAsString": true
+        }
+      },
+      "id": "parse-excel",
+      "name": "Leer hoja de respuestas",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "position": [720, 240]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Convierte cada fila del Excel de Forms al payload aceptado por\n// el backend. Se asume que el formulario incluye dos columnas\n// 'Empresa' y 'Departamento'. El resto de columnas son preguntas.\n\nconst RESERVED = new Set([\n  'ID', 'Start time', 'Completion time', 'Email', 'Name',\n  'Hora de inicio', 'Hora de finalización', 'Marca temporal',\n  'Empresa', 'Departamento'\n]);\n\nconst rows = [];\nfor (const item of $input.all()) {\n  const row = item.json;\n  const submittedAt = row['Completion time'] || row['Hora de finalización'] || row['Marca temporal'] || new Date().toISOString();\n  const company = row['Empresa'];\n  const department = row['Departamento'];\n  if (!company || !department) continue;\n\n  const answers = Object.entries(row)\n    .filter(([k]) => !RESERVED.has(k))\n    .map(([question, value]) => ({ question, value }));\n\n  rows.push({\n    submitted_at: submittedAt,\n    company,\n    department,\n    answers\n  });\n}\nreturn [{ json: { rows } }];"
+      },
+      "id": "map-payload",
+      "name": "Mapear filas → payload",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [960, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.BACKEND_BASE_URL}}/api/responses/ingest/batch",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Ingest-Token", "value": "={{$env.N8N_INGEST_TOKEN}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "post-batch",
+      "name": "POST /responses/ingest/batch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1200, 240]
+    }
+  ],
+  "connections": {
+    "Schedule 40s": {
+      "main": [[{ "node": "Descargar Excel (OneDrive)", "type": "main", "index": 0 }]]
+    },
+    "Descargar Excel (OneDrive)": {
+      "main": [[{ "node": "Leer hoja de respuestas", "type": "main", "index": 0 }]]
+    },
+    "Leer hoja de respuestas": {
+      "main": [[{ "node": "Mapear filas → payload", "type": "main", "index": 0 }]]
+    },
+    "Mapear filas → payload": {
+      "main": [[{ "node": "POST /responses/ingest/batch", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

@@ -1,0 +1,20 @@
+{
+  "name": "garnier-pulsework",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Plataforma de Bienestar y Clima Organizacional - Departamento de Cultura y Gente",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev:backend": "npm --workspace backend run dev",
+    "dev:frontend": "npm --workspace frontend run dev",
+    "migrate": "npm --workspace backend run migrate",
+    "seed": "npm --workspace backend run seed",
+    "n8n": "npx n8n"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "name": "PulseWork - MonthlySnapshot",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "5 1 1 * *" }
+          ]
+        }
+      },
+      "id": "trigger-cron",
+      "name": "Cron 1ro de mes 01:05",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 240]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Cerrar el snapshot del mes anterior. Si hoy es 1 de septiembre,\n// se cierra agosto. Devuelve el período en formato YYYY-MM.\nconst now = new Date();\nconst y = now.getUTCFullYear();\nconst m = now.getUTCMonth(); // 0..11 -> el mes anterior es éste mismo índice si tomamos UTCMonth(actual)-1\nconst d = new Date(Date.UTC(y, m, 1));\nd.setUTCDate(d.getUTCDate() - 1); // último día del mes anterior\nconst periodo = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;\nreturn [{ json: { periodo } }];"
+      },
+      "id": "build-periodo",
+      "name": "Calcular periodo a cerrar",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [480, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.BACKEND_BASE_URL}}/api/snapshots/close",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Ingest-Token", "value": "={{$env.N8N_INGEST_TOKEN}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ periodo: $json.periodo }) }}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "post-close",
+      "name": "POST /snapshots/close",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [720, 240]
+    }
+  ],
+  "connections": {
+    "Cron 1ro de mes 01:05": {
+      "main": [[{ "node": "Calcular periodo a cerrar", "type": "main", "index": 0 }]]
+    },
+    "Calcular periodo a cerrar": {
+      "main": [[{ "node": "POST /snapshots/close", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}
