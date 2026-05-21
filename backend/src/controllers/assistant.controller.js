@@ -45,6 +45,17 @@ const PLANTILLAS_SUGERENCIAS = [
       { texto: 'Top 10 departamentos con mejor porcentaje positivo', editable: false },
       { texto: '¿Cuál es la posición de (nombre empresa) en el ranking global?', editable: true }
     ]
+  },
+  {
+    categoria: 'Bienestar y prácticas de RRHH',
+    icono: '❤',
+    descripcion: 'Consultas generales sobre clima, bienestar y manejo de equipos',
+    plantillas: [
+      { texto: '¿Qué señales indican que un equipo está en riesgo de burnout?', editable: false },
+      { texto: '¿Cómo puedo acompañar a un departamento con clima negativo crónico?', editable: false },
+      { texto: 'Me siento muy estresada en el trabajo, ¿qué prácticas me recomienda?', editable: false },
+      { texto: '¿Qué dinámicas funcionan para mejorar el clima de un equipo?', editable: false }
+    ]
   }
 ];
 
@@ -63,8 +74,10 @@ export const assistantController = {
   capabilities: asyncHandler(async (_req, res) => {
     const declaraciones = listarDeclaraciones();
     res.json({
-      configurado: Boolean(env.GEMINI_API_KEY),
+      configurado: Boolean(env.GEMINI_API_KEY) || Boolean(env.GROQ_API_KEY),
       modelo: env.GEMINI_MODEL,
+      respaldoConfigurado: Boolean(env.GROQ_API_KEY),
+      modeloRespaldo: env.GROQ_API_KEY ? env.GROQ_MODEL : null,
       cantidadHerramientas: declaraciones.length,
       herramientas: declaraciones.map((d) => ({
         nombre: d.name,

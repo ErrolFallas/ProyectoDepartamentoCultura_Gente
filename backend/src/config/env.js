@@ -38,7 +38,10 @@ const schema = z.object({
   SEMAFORO_ROJO_MIN: z.coerce.number().min(0).max(100).default(75),
   SEMAFORO_NEGRO_MIN: z.coerce.number().min(0).max(100).default(90),
   ASSISTANT_DAILY_QUOTA: z.coerce.number().int().min(1).max(1000).default(20),
-  ASSISTANT_CACHE_TTL_MIN: z.coerce.number().int().min(1).max(1440).default(60)
+  ASSISTANT_CACHE_TTL_MIN: z.coerce.number().int().min(1).max(1440).default(240),
+
+  GROQ_API_KEY: z.string().optional().default(''),
+  GROQ_MODEL: z.string().default('llama-3.3-70b-versatile')
 });
 
 const parsed = schema.safeParse(process.env);

@@ -12,14 +12,43 @@ import { env } from '../../config/env.js';
  *  - Cada hit incrementa hit_count → alimenta las sugerencias frecuentes.
  */
 
+/**
+ * Sinónimos que se tratan como equivalentes al normalizar la pregunta. Esto
+ * mejora el hit-rate del caché: "alertas rojas" y "alertas en alto" comparten
+ * forma normalizada y comparten respuesta. Solo agregar pares donde el
+ * significado sea genuinamente intercambiable en el contexto de clima
+ * organizacional de Garnier — sinónimos demasiado amplios contaminan el caché.
+ */
+const SINONIMOS = [
+  // Niveles del termómetro
+  [/\b(rojo|alto)\b/g, 'rojo'],
+  [/\b(negro|critico|criticos|crisis)\b/g, 'negro'],
+  [/\b(amarillo|medio|atencion)\b/g, 'amarillo'],
+  [/\b(verde|estable|sano)\b/g, 'verde'],
+  // Términos temporales (todos referidos al mes actual)
+  [/\b(este mes|el mes actual|ahora|hoy|actualmente|en este momento|al dia de hoy|periodo actual)\b/g, 'este mes'],
+  // Términos analíticos comunes
+  [/\b(porcentaje positivo|pct positivo|porc positivo|positividad)\b/g, 'porcentaje positivo'],
+  [/\b(porcentaje negativo|pct negativo|porc negativo|negatividad)\b/g, 'porcentaje negativo'],
+  [/\b(focos|alertas|atencion requerida)\b/g, 'focos'],
+  [/\b(top|mejores|los primeros)\b/g, 'top'],
+  [/\b(peores|los ultimos|peor)\b/g, 'peor'],
+  [/\b(empresa|compania|organizacion)\b/g, 'empresa'],
+  [/\b(departamento|equipo|area)\b/g, 'departamento']
+];
+
 export function normalizarPregunta(texto) {
-  return String(texto ?? '')
+  let s = String(texto ?? '')
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')  // quita marcas diacríticas (acentos, tildes, diéresis)
     .toLowerCase()
     .replace(/[¿¡!?.,;:()"'`´]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+  for (const [patron, reemplazo] of SINONIMOS) {
+    s = s.replace(patron, reemplazo);
+  }
+  return s.replace(/\s+/g, ' ').trim();
 }
 
 function hashear(normalizada) {

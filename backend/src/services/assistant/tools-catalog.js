@@ -443,35 +443,55 @@ export const TOOLS = [
     declaration: {
       name: 'buscarEntidadPorNombre',
       description:
-        'Búsqueda inteligente por nombre (ej. "GGDI", "Operaciones"). ' +
-        'Devuelve coincidencias en empresas y departamentos con su ID. ' +
-        'Útil cuando el usuario menciona una entidad sin saber su ID interno.',
+        'Búsqueda flexible por nombre de empresa o departamento (ej. "AVON", ' +
+        '"avón", "Avon", "GGDI", "Operaciones"). Ignora mayúsculas, tildes ' +
+        'y espacios extra. SIEMPRE llamar esta tool cuando el usuario ' +
+        'mencione un nombre de empresa o departamento, ANTES de afirmar ' +
+        'que no existe.',
       parameters: {
         type: 'OBJECT',
         properties: {
-          texto: { type: 'STRING', description: 'Texto a buscar (parcial, sin importar mayúsculas)' }
+          texto: { type: 'STRING', description: 'Texto a buscar (parcial, tolerante a tildes y mayúsculas)' }
         },
         required: ['texto']
       }
     },
     execute: async ({ texto }) => {
-      const like = `%${String(texto ?? '').trim()}%`;
-      const [emp] = await pool.query(
-        'SELECT id, nombre FROM companies WHERE nombre LIKE ? AND activo = 1 LIMIT 10',
-        [like]
+      const query = normalizarTexto(String(texto ?? '').trim());
+      if (!query) {
+        return { empresas: [], departamentos: [], busqueda: '' };
+      }
+
+      // Cargamos todas las activas y filtramos en Node con normalización fuerte
+      // (sin tildes, lower, sin espacios extra). Es robusto ante "Avón"/"avon"/
+      // "AVON" y typos menores. Para BDs pequeñas (cientos de departamentos)
+      // sigue siendo barato.
+      const [empAll] = await pool.query(
+        'SELECT id, nombre FROM companies WHERE activo = 1'
       );
-      const [dep] = await pool.query(
+      const [depAll] = await pool.query(
         `SELECT d.id, d.nombre, c.id AS company_id, c.nombre AS empresa
            FROM departments d JOIN companies c ON c.id = d.company_id
-          WHERE d.nombre LIKE ? AND d.activo = 1 LIMIT 20`,
-        [like]
+          WHERE d.activo = 1 AND c.activo = 1`
       );
-      return {
-        empresas: emp.map((e) => ({ id: e.id, nombre: e.nombre })),
-        departamentos: dep.map((d) => ({
+
+      const empMatches = empAll
+        .filter((e) => normalizarTexto(e.nombre).includes(query))
+        .slice(0, 10)
+        .map((e) => ({ id: e.id, nombre: e.nombre }));
+
+      const depMatches = depAll
+        .filter((d) => normalizarTexto(d.nombre).includes(query))
+        .slice(0, 20)
+        .map((d) => ({
           id: d.id, nombre: d.nombre,
           empresa: d.empresa, company_id: d.company_id
-        }))
+        }));
+
+      return {
+        empresas: empMatches,
+        departamentos: depMatches,
+        busqueda: query
       };
     }
   },
@@ -520,6 +540,15 @@ export function listarDeclaraciones() {
 export function obtenerEjecutor(nombre) {
   const t = TOOLS.find((x) => x.declaration.name === nombre);
   return t ? t.execute : null;
+}
+
+function normalizarTexto(s) {
+  return String(s ?? '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function mesActualUTC() {

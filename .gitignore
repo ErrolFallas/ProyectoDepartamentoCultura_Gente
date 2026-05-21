@@ -12,6 +12,9 @@ frontend/.env.local
 *.p12
 secrets/
 
+# === Claude Code local settings (puede contener keys en historial de comandos) ===
+.claude/settings.local.json
+
 *.log
 dist/
 build/

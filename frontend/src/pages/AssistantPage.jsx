@@ -190,7 +190,7 @@ export function AssistantPage() {
                 <div className="flex-1">
                   <div className="font-medium mb-1">{tituloError(error)}</div>
                   <div className="text-amber-800 text-[13px]">{humanizarError(error)}</div>
-                  {cuota && error.code === 'AI_SERVICE_RATE_LIMITED' && (
+                  {cuota && (error.code === 'AI_SERVICE_RATE_LIMITED' || error.code === 'AI_SERVICE_UNAVAILABLE') && (
                     <div className="text-[11px] text-amber-700 mt-1">
                       Su cuota personal sigue intacta: <strong>{cuota.restantes} de {cuota.total}</strong> consultas restantes hoy.
                     </div>
@@ -276,6 +276,8 @@ function tituloError(error) {
       return 'Llegó al límite personal de consultas para hoy';
     case 'AI_SERVICE_RATE_LIMITED':
       return 'El servicio externo de IA está saturado en este momento';
+    case 'AI_SERVICE_UNAVAILABLE':
+      return 'El servicio de IA está temporalmente saturado';
     case 'AI_TIMEOUT':
       return 'El asistente tardó más de lo habitual';
     case 'AI_NOT_CONFIGURED':
