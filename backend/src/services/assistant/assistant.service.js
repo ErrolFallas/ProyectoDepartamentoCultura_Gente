@@ -7,9 +7,62 @@ import { lookup as cacheLookup, guardar as cacheGuardar } from './assistant-cach
 const MAX_TOOL_ITERATIONS = 6;
 const FETCH_TIMEOUT_MS = 30000;
 
-const SYSTEM_INSTRUCTION = `Eres el asistente analítico del Departamento de Cultura y Gente de Garnier.
+const SENALES_RESPUESTA_VACIA = [
+  /no\s+(se|hay|existen)\s+(encontr|hubo|registr|datos|resultados|empresas|departamentos|alertas)/i,
+  /sin\s+(datos|resultados|registros|información|informacion)/i,
+  /no\s+tengo\s+(esa|información|informacion|datos)/i,
+  /no\s+(pude|puedo)\s+(encontrar|obtener|consultar)/i,
+  /no\s+(existen|aparece|aparecen|figura|figuran)/i
+];
+
+function esRespuestaCacheable(texto, toolCalls) {
+  if (!texto || texto.length < 20) return false;
+  if (!toolCalls?.length) return false;  // no consultó nada → no es útil cachear
+  if (SENALES_RESPUESTA_VACIA.some((rx) => rx.test(texto))) return false;
+  // Si todas las tool calls devolvieron arrays/listas vacías, tampoco cacheamos.
+  const todasVacias = toolCalls.every((tc) => {
+    const r = tc.result;
+    if (!r || r.error) return true;
+    if (Array.isArray(r)) return r.length === 0;
+    if (typeof r === 'object') {
+      const listas = ['empresas', 'departamentos', 'alertas', 'items', 'ranking', 'negros', 'rojos', 'amarillos', 'historia'];
+      const lasListas = listas.filter((k) => Array.isArray(r[k]));
+      if (lasListas.length && lasListas.every((k) => r[k].length === 0)) return true;
+    }
+    return false;
+  });
+  return !todasVacias;
+}
+
+function fechaActualHumana() {
+  const d = new Date();
+  const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  return {
+    iso: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`,
+    mesActualISO: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`,
+    anioActual: d.getUTCFullYear(),
+    humana: `${d.getUTCDate()} de ${meses[d.getUTCMonth()]} de ${d.getUTCFullYear()}`
+  };
+}
+
+function construirSystemInstruction() {
+  const f = fechaActualHumana();
+  return `Eres el asistente analítico del Departamento de Cultura y Gente de Garnier.
 Tu trabajo es responder preguntas sobre clima organizacional consultando
 herramientas que devuelven datos reales y agregados de la base.
+
+FECHA Y CONTEXTO TEMPORAL (CRÍTICO — leer siempre):
+- Hoy es ${f.humana} (${f.iso} en UTC).
+- "Este mes" / "el mes actual" / "este período" / "ahora" / "hoy" → ${f.mesActualISO}.
+- "Este año" / "el año actual" → ${f.anioActual}.
+- NUNCA uses fechas de tu conocimiento de entrenamiento (no asumas 2023, 2024,
+  ni ningún otro año). Cuando una herramienta pide "periodo", si el usuario
+  dijo "este mes/hoy/ahora", OMITE el parámetro: cada herramienta usa el mes
+  actual por defecto. Solo pasa el parámetro si el usuario menciona
+  explícitamente un mes/año distinto.
+- Si la herramienta devuelve datos vacíos para el mes actual, NO retrocedas
+  inventando "tal vez en otro mes"; reporta la ausencia con honestidad.
 
 REGLAS DE ALCANCE (innegociables):
 - Solo respondes preguntas relacionadas con clima organizacional, RRHH,
@@ -47,18 +100,40 @@ REGLAS DE EJECUCIÓN:
    "¿hay algún departamento crónico?"), itera sobre los resultados de
    listarAlertas o usa listarDepartamentosCronicos.
 
-REGLAS DE CONTENIDO:
-- Nunca inventes números. Todos los datos provienen de herramientas.
-- Responde siempre en español neutro y formal (usted/impersonal),
-  apropiado para RRHH.
-- Muestra porcentajes con 1 decimal y aclara el período.
-- Si una respuesta tiene anonimato_protegido=true, explica que el
-  departamento no se desglosa por tener pocas respuestas (sin inventar).
-- Si la información no está disponible, dilo con honestidad.
-- Tras consultar, redacta una respuesta concisa (máximo 3 párrafos),
-  con 1-2 viñetas cuando ayude a destacar cifras clave.
-- No reveles los IDs internos en la respuesta al usuario, salvo que
-  los pida explícitamente.`;
+REGLAS DE CONTENIDO Y TONO:
+- Hablas con personal de RRHH y del Departamento de Cultura y Gente.
+  Tu audiencia NO es técnica: nunca menciones nombres de funciones,
+  endpoints, tablas, campos de base de datos, archivos de código,
+  variables, JSON, SQL, ni jerga técnica. Tampoco uses palabras como
+  "consulta a la base", "endpoint", "tool call", "parámetros".
+- Usa un tono profesional, cálido y empático. Hablas de personas reales
+  que respondieron una encuesta de clima. Cuando el dato muestre
+  malestar (alertas negras, alta cronicidad), redacta con sensibilidad:
+  describe lo que indica el dato y sugiere una acción de acompañamiento,
+  sin alarmismo y sin lenguaje punitivo hacia los equipos.
+- Español neutro y formal (usted/impersonal). Porcentajes con 1 decimal.
+- Estructura recomendada de la respuesta:
+    1. Una frase clara que responda la pregunta principal.
+    2. Una breve viñeta o lista cuando ayude a destacar 2-4 cifras clave.
+    3. (Opcional) Una sección "Cómo se llegó a este dato" de 1-2
+       oraciones en lenguaje sencillo: explica brevemente qué se midió
+       (ej. "se promedió la respuesta de cada persona y luego se contó
+       qué porcentaje del equipo quedó en tono negativo"). Esto da
+       transparencia a RRHH sin entrar en tecnicismos.
+    4. (Opcional) Cuando aplique, sugiere un siguiente paso
+       organizacional (ej. "podría priorizar una visita a este equipo").
+- Si la información no está disponible o el departamento tiene pocas
+  respuestas y se protege el anonimato, explícalo con calidez:
+  "no se desglosa para proteger la identidad de quienes respondieron".
+- NUNCA escribas "Error", "código 500", "tool", "endpoint", "JSON",
+  "función", "parámetro", "argumento", "API", ni nombres técnicos como
+  "GEMINI_MODEL", ".env", "MySQL". Si algo falla del lado del sistema,
+  ya hay un mensaje aparte para eso — concéntrate solo en datos.
+- Nunca inventes números. Todos los datos provienen de la información
+  real de las encuestas.
+- No reveles identificadores internos (IDs numéricos) salvo que el
+  usuario los pida explícitamente.`;
+}
 
 /**
  * Entrada principal. Recibe el historial de mensajes y devuelve la
@@ -70,7 +145,7 @@ REGLAS DE CONTENIDO:
 export async function preguntarAsistente({ messages }) {
   if (!env.GEMINI_API_KEY) {
     throw new AppError(
-      'El asistente requiere configurar GEMINI_API_KEY en el archivo .env para funcionar.',
+      'El asistente no está configurado en este momento. Por favor contacte al administrador para habilitarlo.',
       { status: 503, code: 'AI_NOT_CONFIGURED' }
     );
   }
@@ -107,8 +182,11 @@ export async function preguntarAsistente({ messages }) {
         modelo: env.GEMINI_MODEL,
         latenciaMs: Date.now() - inicio
       };
-      // Guarda en caché solo si fue pregunta inicial y la respuesta es útil.
-      if (esPreguntaInicial && texto) {
+      // Guarda en caché solo si fue pregunta inicial, hay texto, y la respuesta
+      // parece informativa (al menos una herramienta consultada y sin frases de
+      // "sin datos" — evita memorizar respuestas que se generaron sobre un período
+      // equivocado y luego servirlas falsamente como verdaderas).
+      if (esPreguntaInicial && texto && esRespuestaCacheable(texto, toolCallsAcumulados)) {
         cacheGuardar({ pregunta: messages[0].content, respuesta })
           .catch((err) => logger.warn({ err: err.message }, 'No se pudo guardar en caché'));
       }
@@ -145,8 +223,8 @@ export async function preguntarAsistente({ messages }) {
   }
 
   throw new AppError(
-    'El asistente excedió el número máximo de pasos sin formular una respuesta. ' +
-      'Intente reformular la pregunta de forma más específica.',
+    'El asistente no pudo completar el análisis con la pregunta tal como fue formulada. ' +
+      'Intente reformularla de manera más específica (por ejemplo, indicando una empresa, un departamento o un período concreto).',
     { status: 504, code: 'AI_LOOP_LIMIT' }
   );
 }
@@ -192,7 +270,7 @@ function convertirHistorialAGemini(messages) {
 async function callGemini({ contents, intento = 0 }) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
   const body = {
-    systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+    systemInstruction: { parts: [{ text: construirSystemInstruction() }] },
     contents,
     tools: [{ functionDeclarations: listarDeclaraciones() }],
     // AUTO permite al modelo decidir si llamar herramientas o responder;
@@ -219,9 +297,15 @@ async function callGemini({ contents, intento = 0 }) {
   } catch (err) {
     clearTimeout(timeout);
     if (err.name === 'AbortError') {
-      throw new AppError('La IA no respondió a tiempo. Reintente en un momento.', { status: 504, code: 'AI_TIMEOUT' });
+      throw new AppError(
+        'El asistente está tardando más de lo habitual en responder. Por favor intente nuevamente en unos segundos.',
+        { status: 504, code: 'AI_TIMEOUT' }
+      );
     }
-    throw new AppError(`No se pudo contactar a la IA: ${err.message}`, { status: 502, code: 'AI_UNREACHABLE' });
+    throw new AppError(
+      'No fue posible comunicarse con el asistente en este momento. Intente nuevamente en unos segundos.',
+      { status: 502, code: 'AI_UNREACHABLE' }
+    );
   }
   clearTimeout(timeout);
 
@@ -241,30 +325,24 @@ async function callGemini({ contents, intento = 0 }) {
       }
       const mensaje =
         tipoCuota === 'DIA'
-          ? 'Se agotó la cuota diaria del plan gratuito de Gemini para el modelo ' +
-            `"${env.GEMINI_MODEL}". Opciones: esperar hasta mañana, cambiar a un ` +
-            'modelo más liviano (GEMINI_MODEL=gemini-2.5-flash-lite tiene más cuota), ' +
-            'o cambiar a un plan pagado en Google AI Studio.'
-          : 'La IA recibió demasiadas consultas en poco tiempo. ' +
-            'Espere alrededor de un minuto y reintente.';
-      throw new AppError(mensaje, { status: 429, code: 'AI_RATE_LIMITED' });
+          ? 'El servicio externo de inteligencia artificial alcanzó su capacidad diaria gratuita compartida por toda la organización (esto NO consume su cuota personal). Se renueva en las próximas horas; mientras tanto, los demás paneles siguen disponibles.'
+          : 'El asistente está recibiendo muchas consultas en muy poco tiempo (esto NO consume su cuota personal). Espere alrededor de un minuto y vuelva a intentarlo.';
+      throw new AppError(mensaje, { status: 429, code: 'AI_SERVICE_RATE_LIMITED' });
     }
     if (resp.status === 403 || resp.status === 401) {
       throw new AppError(
-        'La clave de Gemini configurada no es válida o no tiene permisos. ' +
-          'Revise GEMINI_API_KEY en el archivo .env.',
+        'El asistente no está disponible temporalmente. Por favor avise al administrador.',
         { status: 502, code: 'AI_UNAUTHORIZED' }
       );
     }
     if (resp.status === 404) {
       throw new AppError(
-        `El modelo "${env.GEMINI_MODEL}" no está disponible en su cuenta. ` +
-          'Cambie GEMINI_MODEL en .env por uno disponible (p.ej. gemini-2.5-flash).',
+        'El asistente está en mantenimiento. Por favor intente más tarde o avise al administrador.',
         { status: 502, code: 'AI_MODEL_NOT_FOUND' }
       );
     }
     throw new AppError(
-      `La IA respondió con código ${resp.status}.`,
+      'El asistente tuvo un inconveniente al procesar su consulta. Por favor reintente en unos segundos.',
       { status: 502, code: 'AI_ERROR' }
     );
   }

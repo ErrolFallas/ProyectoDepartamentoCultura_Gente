@@ -57,11 +57,37 @@ export async function listAlerts(filtros) {
   return alertsRepo.list(filtros);
 }
 
-export async function marcarAtendida({ alertId, usuarioId, notas }) {
+export async function marcarAtendida({ alertId, usuarioId, notas, atendidaAt }) {
   const alerta = await alertsRepo.findById(alertId);
   if (!alerta) throw new NotFoundError('Alerta no encontrada');
-  await alertsRepo.marcarAtendida({ id: alertId, usuarioId, notas });
-  return { id: alertId, atendida: true };
+  // Convierte ISO → DATETIME MySQL ('YYYY-MM-DD HH:MM:SS') si vino fecha custom.
+  let fechaMysql = null;
+  if (atendidaAt) {
+    const d = new Date(atendidaAt);
+    if (Number.isNaN(d.getTime())) {
+      throw new ValidationError('Fecha de visita inválida', [{ path: 'atendida_at', message: 'fecha inválida' }]);
+    }
+    fechaMysql = d.toISOString().slice(0, 19).replace('T', ' ');
+  }
+  await alertsRepo.marcarAtendida({ id: alertId, usuarioId, notas, atendidaAt: fechaMysql });
+  return { id: alertId, atendida: true, atendidaAt: fechaMysql };
+}
+
+export async function desmarcarAtendida({ alertId, motivo }) {
+  const alerta = await alertsRepo.findById(alertId);
+  if (!alerta) throw new NotFoundError('Alerta no encontrada');
+  if (!alerta.atendida) {
+    // Idempotente: si ya no está atendida, no hace nada.
+    return { id: alertId, atendida: false };
+  }
+  await alertsRepo.desmarcarAtendida({ id: alertId, motivo });
+  return { id: alertId, atendida: false };
+}
+
+export async function obtenerDetalle({ alertId }) {
+  const detalle = await alertsRepo.findByIdConDetalle(alertId);
+  if (!detalle) throw new NotFoundError('Alerta no encontrada');
+  return detalle;
 }
 
 /**

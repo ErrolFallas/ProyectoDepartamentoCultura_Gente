@@ -49,7 +49,14 @@ export const alertsRecalcBody = z.object({
 });
 
 export const alertAtenderBody = z.object({
-  notas: z.string().max(500).optional()
+  notas: z.string().max(500).optional(),
+  // Fecha en la que efectivamente se realizó la visita/atención.
+  // Si se omite, el backend usa la fecha actual.
+  atendida_at: z.string().datetime({ offset: true }).optional()
+});
+
+export const alertDesmarcarBody = z.object({
+  motivo: z.string().max(300).optional()
 });
 
 export const temporalQuery = z.object({

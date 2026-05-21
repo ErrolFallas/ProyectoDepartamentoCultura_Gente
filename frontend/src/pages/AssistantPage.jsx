@@ -89,7 +89,7 @@ export function AssistantPage() {
       // Refresca sugerencias para que las nuevas frecuentes aparezcan.
       reloadSugerencias();
     } catch (e) {
-      setError(e.message ?? 'Error al consultar el asistente');
+      setError({ msg: e.message ?? 'Error al consultar el asistente', code: e.code });
       if (e.code === 'ASSISTANT_QUOTA_EXCEEDED') {
         // Refresca el contador para mostrar 0.
         api.assistantQuota().then(setCuota).catch(() => {});
@@ -184,18 +184,28 @@ export function AssistantPage() {
           )}
 
           {error && (
-            <div className="rounded-lg bg-semaforo-rojo/10 border border-semaforo-rojo/30 px-3 py-2 text-sm text-semaforo-rojo">
-              <div className="font-medium mb-1">No se pudo obtener respuesta</div>
-              <div className="opacity-90 mb-2">{error}</div>
-              {messages.length > 0 && messages[messages.length - 1].role === 'user' && !sinCuota && (
-                <button
-                  onClick={reintentar}
-                  disabled={enviando}
-                  className="text-xs underline hover:no-underline disabled:opacity-50"
-                >
-                  Reintentar la última pregunta
-                </button>
-              )}
+            <div className="rounded-lg bg-amber-50 border border-amber-300 px-4 py-3 text-sm text-amber-900">
+              <div className="flex items-start gap-2">
+                <span className="text-lg leading-none">⚠</span>
+                <div className="flex-1">
+                  <div className="font-medium mb-1">{tituloError(error)}</div>
+                  <div className="text-amber-800 text-[13px]">{humanizarError(error)}</div>
+                  {cuota && error.code === 'AI_SERVICE_RATE_LIMITED' && (
+                    <div className="text-[11px] text-amber-700 mt-1">
+                      Su cuota personal sigue intacta: <strong>{cuota.restantes} de {cuota.total}</strong> consultas restantes hoy.
+                    </div>
+                  )}
+                  {messages.length > 0 && messages[messages.length - 1].role === 'user' && !sinCuota && error.code !== 'ASSISTANT_QUOTA_EXCEEDED' && (
+                    <button
+                      onClick={reintentar}
+                      disabled={enviando}
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-amber-900 underline hover:no-underline disabled:opacity-50"
+                    >
+                      ↻ Reintentar
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -258,6 +268,45 @@ export function AssistantPage() {
       )}
     </>
   );
+}
+
+function tituloError(error) {
+  switch (error?.code) {
+    case 'ASSISTANT_QUOTA_EXCEEDED':
+      return 'Llegó al límite personal de consultas para hoy';
+    case 'AI_SERVICE_RATE_LIMITED':
+      return 'El servicio externo de IA está saturado en este momento';
+    case 'AI_TIMEOUT':
+      return 'El asistente tardó más de lo habitual';
+    case 'AI_NOT_CONFIGURED':
+      return 'Asistente no disponible';
+    case 'AI_LOOP_LIMIT':
+      return 'La pregunta es demasiado amplia';
+    default:
+      return 'El asistente no pudo responder esta vez';
+  }
+}
+
+function humanizarError(error) {
+  const msg = error?.msg ?? error;
+  if (!msg) return 'Por favor intente nuevamente en unos segundos.';
+  const lower = String(msg).toLowerCase();
+  // Si el backend ya devolvió un mensaje humano, lo usamos tal cual.
+  if (/(reintente|intente|disponible|límite|tardando|inconveniente|momento|mantenimiento|cuota|capacidad)/i.test(msg) &&
+      !/\b(error|http|gemini|api|jwt|sql|exception|stack)\b/i.test(msg)) {
+    return msg;
+  }
+  // Mensajes crudos quedan disimulados por uno amable.
+  if (lower.includes('502') || lower.includes('503') || lower.includes('504') || lower.includes('puerta')) {
+    return 'El servicio de IA tuvo un inconveniente momentáneo. Por favor reintente en unos segundos; suele resolverse solo.';
+  }
+  if (lower.includes('429') || lower.includes('demasiadas')) {
+    return 'El asistente está recibiendo muchas consultas en este momento. Espere alrededor de un minuto y vuelva a intentarlo.';
+  }
+  if (lower.includes('timeout') || lower.includes('tiempo')) {
+    return 'La consulta está tardando más de lo habitual. Reintente en unos segundos.';
+  }
+  return 'Algo no salió como esperábamos. Por favor reintente en unos segundos; si persiste, contacte al administrador.';
 }
 
 function CuotaBar({ cuota, tiempoRestante }) {

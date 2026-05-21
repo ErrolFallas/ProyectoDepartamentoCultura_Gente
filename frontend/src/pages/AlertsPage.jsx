@@ -10,6 +10,16 @@ import { EmptyState } from '../components/common/EmptyState.jsx';
 import { NivelPill } from '../components/common/NivelPill.jsx';
 import { PeriodPicker } from '../components/common/PeriodPicker.jsx';
 import { pct, currentPeriodMonth, dateShort } from '../lib/format.js';
+import {
+  pedirDatosDeAtencion,
+  confirmarEdicionConPalabraClave,
+  confirmarDesmarcar,
+  verDetalleAtencion,
+  toastExito,
+  alertaError
+} from '../lib/sweetAlertConfig.js';
+
+const UMBRAL_ESTABLE = 0.1;  // <0.1% se considera estable y no requiere acción
 
 export function AlertsPage() {
   const [periodo, setPeriodo] = useState(currentPeriodMonth());
@@ -46,13 +56,75 @@ export function AlertsPage() {
     }
   }
 
-  async function atender(id) {
-    const notas = window.prompt('Notas de la visita / atención (opcional):') ?? '';
+  async function atender(alerta) {
+    const datos = await pedirDatosDeAtencion({
+      departamento: alerta.departamento,
+      empresa: alerta.empresa,
+      nivel: alerta.nivel,
+      pctNegativo: alerta.pct_negativo
+    });
+    if (!datos) return;  // canceló en algún paso
+
     try {
-      await api.atenderAlerta(id, notas);
+      await api.atenderAlerta(alerta.id, datos);
+      toastExito(`Atención registrada para ${alerta.departamento}`);
       reload();
     } catch (e) {
-      alert(e.message);
+      await alertaError(e.message ?? 'Ocurrió un problema al guardar la atención. Intente de nuevo.');
+    }
+  }
+
+  async function editarAtencion(alerta) {
+    const ok = await confirmarEdicionConPalabraClave();
+    if (!ok) return;
+
+    const datos = await pedirDatosDeAtencion({
+      departamento: alerta.departamento,
+      empresa: alerta.empresa,
+      nivel: alerta.nivel,
+      pctNegativo: alerta.pct_negativo
+    });
+    if (!datos) return;
+
+    try {
+      await api.atenderAlerta(alerta.id, datos);
+      toastExito(`Información de atención actualizada para ${alerta.departamento}`);
+      reload();
+    } catch (e) {
+      await alertaError(e.message ?? 'Ocurrió un problema al actualizar la atención.');
+    }
+  }
+
+  async function verDetalle(alerta) {
+    try {
+      const detalle = await api.detalleAlerta(alerta.id);
+      const accion = await verDetalleAtencion(detalle);
+      if (accion === 'editar') {
+        await editarAtencion(alerta);
+      } else if (accion === 'desmarcar') {
+        await desmarcarAtencion(alerta);
+      }
+    } catch (e) {
+      await alertaError(e.message ?? 'No se pudo cargar el detalle.');
+    }
+  }
+
+  async function desmarcarAtencion(alerta) {
+    const fechaPrevia = alerta.atendida_at
+      ? dateShort(alerta.atendida_at)
+      : null;
+    const result = await confirmarDesmarcar({
+      departamento: alerta.departamento,
+      fechaPrevia
+    });
+    if (!result) return;
+
+    try {
+      await api.desmarcarAlerta(alerta.id, result.motivo);
+      toastExito(`${alerta.departamento} vuelve a aparecer como pendiente`);
+      reload();
+    } catch (e) {
+      await alertaError(e.message ?? 'No se pudo revertir la atención.');
     }
   }
 
@@ -113,7 +185,11 @@ export function AlertsPage() {
           title={`${data.items.length} departamento(s) en la lista`}
           subtitle="Cada departamento (👥) aparece con su empresa (🏢), su nivel de alerta y el % de personal con tono negativo."
         >
-          <AlertTable items={data.items} onAtender={atender} />
+          <AlertTable
+            items={data.items}
+            onAtender={atender}
+            onVerDetalle={verDetalle}
+          />
         </Card>
       ) : (
         <EmptyState
@@ -125,7 +201,7 @@ export function AlertsPage() {
   );
 }
 
-function AlertTable({ items, onAtender }) {
+function AlertTable({ items, onAtender, onVerDetalle }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -135,31 +211,46 @@ function AlertTable({ items, onAtender }) {
             <th className="py-2">👥 Departamento</th>
             <th className="py-2">🏢 Empresa</th>
             <th className="py-2 text-right">% Personal negativo</th>
-            <th className="py-2">¿Atendida?</th>
+            <th className="py-2">Estado</th>
             <th className="py-2 text-right">Acciones</th>
           </tr>
         </thead>
         <tbody>
-          {items.map((a) => (
-            <tr key={a.id} className="border-b border-ink-100 last:border-0">
-              <td className="py-2"><NivelPill nivel={a.nivel} /></td>
-              <td className="py-2 font-medium text-ink-800">{a.departamento}</td>
-              <td className="py-2 text-ink-500">{a.empresa}</td>
-              <td className="py-2 text-right font-medium">{pct(a.pct_negativo, 1)}</td>
-              <td className="py-2 text-xs">
-                {a.atendida
-                  ? <span className="text-semaforo-verde">Sí · visitada el {dateShort(a.atendida_at)}</span>
-                  : <span className="text-ink-400">Pendiente</span>}
-              </td>
-              <td className="py-2 text-right">
-                {!a.atendida && (
-                  <button onClick={() => onAtender(a.id)} className="btn-secondary text-xs">
-                    Marcar como atendida
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
+          {items.map((a) => {
+            const estable = Number(a.pct_negativo) < UMBRAL_ESTABLE;
+            return (
+              <tr key={a.id} className="border-b border-ink-100 last:border-0">
+                <td className="py-2"><NivelPill nivel={a.nivel} /></td>
+                <td className="py-2 font-medium text-ink-800">{a.departamento}</td>
+                <td className="py-2 text-ink-500">{a.empresa}</td>
+                <td className="py-2 text-right font-medium">{pct(a.pct_negativo, 1)}</td>
+                <td className="py-2 text-xs">
+                  {estable ? (
+                    <span className="text-semaforo-verde">✓ Estable</span>
+                  ) : a.atendida ? (
+                    <span className="text-semaforo-verde">
+                      ✓ Atendida el {dateShort(a.atendida_at)}
+                    </span>
+                  ) : (
+                    <span className="text-ink-400">Pendiente</span>
+                  )}
+                </td>
+                <td className="py-2 text-right">
+                  {estable ? (
+                    <span className="text-[11px] text-ink-400 italic">No requiere atención</span>
+                  ) : a.atendida ? (
+                    <button onClick={() => onVerDetalle(a)} className="btn-secondary text-xs">
+                      Ver / editar detalles
+                    </button>
+                  ) : (
+                    <button onClick={() => onAtender(a)} className="btn-primary text-xs">
+                      Marcar como atendida
+                    </button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

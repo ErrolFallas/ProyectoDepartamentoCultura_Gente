@@ -25,8 +25,24 @@ export const alertsController = {
     const result = await alertsService.marcarAtendida({
       alertId: Number(req.params.id),
       usuarioId: req.user?.sub,
-      notas: req.body?.notas
+      notas: req.body?.notas,
+      atendidaAt: req.body?.atendida_at
     });
     res.json(result);
+  }),
+
+  desmarcar: asyncHandler(async (req, res) => {
+    const result = await alertsService.desmarcarAtendida({
+      alertId: Number(req.params.id),
+      motivo: req.body?.motivo
+    });
+    res.json(result);
+  }),
+
+  detalle: asyncHandler(async (req, res) => {
+    const detalle = await alertsService.obtenerDetalle({
+      alertId: Number(req.params.id)
+    });
+    res.json(detalle);
   })
 };

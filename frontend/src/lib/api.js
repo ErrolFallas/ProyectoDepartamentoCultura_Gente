@@ -106,7 +106,15 @@ export const api = {
   listAlerts: (query) => request('/alerts', { query }),
   focos: (query) => request('/alerts/focos', { query }),
   recalculateAlerts: (periodo) => request('/alerts/recalculate', { method: 'POST', body: { periodo } }),
-  atenderAlerta: (id, notas) => request(`/alerts/${id}/atender`, { method: 'POST', body: { notas } }),
+  atenderAlerta: (id, { notas, atendidaAt } = {}) => request(`/alerts/${id}/atender`, {
+    method: 'POST',
+    body: { notas, atendida_at: atendidaAt }
+  }),
+  desmarcarAlerta: (id, motivo) => request(`/alerts/${id}/desmarcar`, {
+    method: 'POST',
+    body: { motivo }
+  }),
+  detalleAlerta: (id) => request(`/alerts/${id}/detalle`),
 
   // Temporal
   dayOfWeek: (query) => request('/temporal/day-of-week', { query }),

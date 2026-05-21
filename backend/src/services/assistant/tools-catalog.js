@@ -25,7 +25,14 @@ import { snapshotsRepo } from '../../repositories/snapshots.repo.js';
 import { distribucionPorDiaSemana, cronicidad } from '../temporal.service.js';
 
 const PERIOD_HINT =
-  'Período en formato YYYY-MM (mes específico) o YYYY (año entero). Si no se especifica, usar el mes actual.';
+  'Período en formato YYYY-MM (mes específico) o YYYY (año entero). ' +
+  'IMPORTANTE: si el usuario dice "este mes", "hoy", "ahora" o no menciona un período, ' +
+  'OMITA este parámetro para que el sistema use el mes actual real. ' +
+  'NUNCA pase un año o mes basado en su conocimiento de entrenamiento.';
+
+const PERIOD_HINT_MES =
+  'Período YYYY-MM. IMPORTANTE: omitir si el usuario dice "este mes/hoy/ahora" — ' +
+  'el sistema usa el mes actual real. Nunca inventar año.';
 
 export const TOOLS = [
   // -----------------------------------------------------------------
@@ -79,7 +86,7 @@ export const TOOLS = [
       parameters: {
         type: 'OBJECT',
         properties: {
-          periodo: { type: 'STRING', description: 'Período YYYY-MM. Omitir para mes actual.' }
+          periodo: { type: 'STRING', description: PERIOD_HINT_MES }
         }
       }
     },
@@ -98,7 +105,7 @@ export const TOOLS = [
       parameters: {
         type: 'OBJECT',
         properties: {
-          periodo: { type: 'STRING', description: 'Período YYYY-MM. Omitir para mes actual.' },
+          periodo: { type: 'STRING', description: PERIOD_HINT_MES },
           nivel: { type: 'STRING', description: 'VERDE, AMARILLO, ROJO o NEGRO. Omitir para todos.' },
           atendida: { type: 'BOOLEAN', description: 'true=ya atendida, false=pendiente. Omitir para todas.' }
         }
@@ -125,7 +132,7 @@ export const TOOLS = [
       parameters: {
         type: 'OBJECT',
         properties: {
-          periodo: { type: 'STRING', description: 'Período YYYY-MM. Omitir para mes actual.' },
+          periodo: { type: 'STRING', description: PERIOD_HINT_MES },
           nivel: {
             type: 'STRING',
             description: 'Filtrar por nivel (NEGRO, ROJO, AMARILLO). Omitir para contar todas.'

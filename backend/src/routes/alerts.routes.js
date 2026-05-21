@@ -6,7 +6,8 @@ import { validate } from '../middleware/validate.js';
 import {
   alertsListQuery,
   alertsRecalcBody,
-  alertAtenderBody
+  alertAtenderBody,
+  alertDesmarcarBody
 } from '../validators/analytics.schemas.js';
 
 const router = Router();
@@ -27,6 +28,15 @@ router.post(
   validate({ body: alertAtenderBody }),
   alertsController.atender
 );
+
+router.post(
+  '/:id/desmarcar',
+  requireAuth,
+  validate({ body: alertDesmarcarBody }),
+  alertsController.desmarcar
+);
+
+router.get('/:id/detalle', requireAuth, alertsController.detalle);
 
 function flexibleAuth(req, res, next) {
   if (req.headers['x-ingest-token']) return requireIngestToken(req, res, next);

@@ -40,8 +40,8 @@ export function ChatMessage({ message }) {
           {!esUsuario && message.latenciaMs != null && (
             <div className="mt-2 text-[10px] text-ink-400">
               {message.desdeCache
-                ? `Respondida desde caché · sin gastar cuota · modelo original ${message.modelo ?? 'IA'}`
-                : `${Math.round(message.latenciaMs / 100) / 10}s · ${message.modelo}`}
+                ? 'Respondida desde la memoria del asistente · sin descontar cuota'
+                : `Respondida en ${Math.round(message.latenciaMs / 100) / 10} s`}
             </div>
           )}
         </div>

@@ -49,8 +49,8 @@ export async function consumirCuota(userId) {
   const estado = await obtenerEstadoCuota(userId);
   if (estado.restantes <= 0) {
     throw new AppError(
-      `Llegó al límite diario de ${estado.total} consultas al asistente IA. ` +
-        'La cuota se renueva a las 00:00 UTC del día siguiente.',
+      `Usted llegó al límite personal de ${estado.total} consultas al asistente para hoy. ` +
+        'Su cuota se renueva mañana; mientras tanto, los demás paneles siguen disponibles.',
       { status: 429, code: 'ASSISTANT_QUOTA_EXCEEDED' }
     );
   }
