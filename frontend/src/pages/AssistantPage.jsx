@@ -6,16 +6,25 @@ import { Card } from '../components/common/Card.jsx';
 import { Spinner } from '../components/common/Spinner.jsx';
 import { ChatMessage } from '../components/assistant/ChatMessage.jsx';
 import { SuggestionPills } from '../components/assistant/SuggestionPills.jsx';
+import { validarPregunta } from '../lib/assistantGuard.js';
 
 export function AssistantPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
+  const [aviso, setAviso] = useState(null);
+  const [cuota, setCuota] = useState(null);
+  const [tiempoRestante, setTiempoRestante] = useState('');
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
 
   const { data: capabilities } = useApi(() => api.assistantCapabilities(), []);
+  const { data: sugerencias, reload: reloadSugerencias } = useApi(() => api.assistantSuggestions(), []);
+
+  useEffect(() => {
+    api.assistantQuota().then(setCuota).catch(() => setCuota(null));
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -23,11 +32,36 @@ export function AssistantPage() {
     }
   }, [messages, enviando]);
 
+  useEffect(() => {
+    if (!cuota?.resetEn) return;
+    const tick = () => setTiempoRestante(formatearCuentaRegresiva(cuota.resetEn));
+    tick();
+    const id = setInterval(tick, 30000);
+    return () => clearInterval(id);
+  }, [cuota?.resetEn]);
+
   async function enviar(texto) {
     const limpio = (texto ?? input).trim();
     if (!limpio || enviando) return;
 
+    const validacion = validarPregunta(limpio);
+    if (!validacion.allowed) {
+      setAviso(validacion);
+      setError(null);
+      return;
+    }
+
+    if (cuota && cuota.restantes <= 0) {
+      setAviso({
+        allowed: false,
+        motivo: 'Cuota diaria agotada',
+        explicacion: `Llegó al límite de ${cuota.total} consultas hoy. Se renueva en ${tiempoRestante}.`
+      });
+      return;
+    }
+
     setError(null);
+    setAviso(null);
     const nuevoUsuario = { role: 'user', content: limpio };
     const nuevoHistorial = [...messages, nuevoUsuario];
     setMessages(nuevoHistorial);
@@ -46,19 +80,34 @@ export function AssistantPage() {
           content: resp.respuesta,
           toolCalls: resp.toolCalls ?? [],
           modelo: resp.modelo,
-          latenciaMs: resp.latenciaMs
+          latenciaMs: resp.latenciaMs,
+          desdeCache: resp.desdeCache ?? false,
+          hitCount: resp.hitCount ?? null
         }
       ]);
+      if (resp.cuota) setCuota(resp.cuota);
+      // Refresca sugerencias para que las nuevas frecuentes aparezcan.
+      reloadSugerencias();
     } catch (e) {
       setError(e.message ?? 'Error al consultar el asistente');
+      if (e.code === 'ASSISTANT_QUOTA_EXCEEDED') {
+        // Refresca el contador para mostrar 0.
+        api.assistantQuota().then(setCuota).catch(() => {});
+      }
     } finally {
       setEnviando(false);
       inputRef.current?.focus();
     }
   }
 
+  function cargarSugerenciaAlInput(texto) {
+    setInput(texto);
+    setAviso(null);
+    setError(null);
+    inputRef.current?.focus();
+  }
+
   async function reintentar() {
-    // Reusar el último mensaje del usuario sin duplicarlo en la lista.
     if (enviando) return;
     setError(null);
     await consultarIA(messages);
@@ -67,10 +116,13 @@ export function AssistantPage() {
   function nuevaConversacion() {
     setMessages([]);
     setError(null);
+    setAviso(null);
   }
 
   const sinClave = capabilities && !capabilities.configurado;
+  const sinCuota = cuota && cuota.restantes <= 0;
   const chatVacio = messages.length === 0;
+  const inputDeshabilitado = enviando || sinClave || sinCuota;
 
   return (
     <>
@@ -95,13 +147,21 @@ export function AssistantPage() {
         </Card>
       )}
 
+      {cuota && (
+        <CuotaBar cuota={cuota} tiempoRestante={tiempoRestante} />
+      )}
+
       <Card className="mb-4 !p-0 overflow-hidden">
         <div
           ref={scrollRef}
           className="min-h-[460px] max-h-[60vh] overflow-y-auto p-4 space-y-4 bg-ink-50/40"
         >
           {chatVacio ? (
-            <EstadoVacio onPick={enviar} disabled={enviando || sinClave} />
+            <EstadoVacio
+              sugerencias={sugerencias}
+              onPick={cargarSugerenciaAlInput}
+              disabled={inputDeshabilitado}
+            />
           ) : (
             messages.map((m, i) => <ChatMessage key={i} message={m} />)
           )}
@@ -113,11 +173,21 @@ export function AssistantPage() {
             </div>
           )}
 
+          {aviso && !aviso.allowed && (
+            <div className="rounded-lg bg-yellow-50 border border-yellow-300 px-3 py-2 text-sm text-yellow-900">
+              <div className="font-medium mb-1">🛡 Pregunta bloqueada por seguridad</div>
+              <div className="text-xs mb-1"><span className="font-semibold">Motivo:</span> {aviso.motivo}</div>
+              {aviso.explicacion && (
+                <div className="text-xs opacity-90">{aviso.explicacion}</div>
+              )}
+            </div>
+          )}
+
           {error && (
             <div className="rounded-lg bg-semaforo-rojo/10 border border-semaforo-rojo/30 px-3 py-2 text-sm text-semaforo-rojo">
               <div className="font-medium mb-1">No se pudo obtener respuesta</div>
               <div className="opacity-90 mb-2">{error}</div>
-              {messages.length > 0 && messages[messages.length - 1].role === 'user' && (
+              {messages.length > 0 && messages[messages.length - 1].role === 'user' && !sinCuota && (
                 <button
                   onClick={reintentar}
                   disabled={enviando}
@@ -138,20 +208,22 @@ export function AssistantPage() {
             ref={inputRef}
             type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => { setInput(e.target.value); if (aviso) setAviso(null); }}
             placeholder={
               sinClave
                 ? 'IA no configurada'
-                : 'Escriba su pregunta en lenguaje natural, por ejemplo: ¿qué empresa tiene más alertas?'
+                : sinCuota
+                  ? `Cuota diaria agotada · se renueva en ${tiempoRestante}`
+                  : 'Escriba su pregunta en lenguaje natural, por ejemplo: ¿qué empresa tiene más alertas?'
             }
-            disabled={enviando || sinClave}
+            disabled={inputDeshabilitado}
             className="input flex-1"
             autoFocus
           />
           <button
             type="submit"
             className="btn-primary"
-            disabled={enviando || sinClave || !input.trim()}
+            disabled={inputDeshabilitado || !input.trim()}
           >
             Enviar
           </button>
@@ -188,7 +260,49 @@ export function AssistantPage() {
   );
 }
 
-function EstadoVacio({ onPick, disabled }) {
+function CuotaBar({ cuota, tiempoRestante }) {
+  const { usadas, restantes, total } = cuota;
+  const pct = total > 0 ? Math.min(100, (usadas / total) * 100) : 0;
+  const tone = restantes === 0
+    ? 'bg-semaforo-rojo'
+    : restantes <= Math.max(2, Math.floor(total * 0.2))
+      ? 'bg-semaforo-amarillo'
+      : 'bg-brand-600';
+
+  return (
+    <div className="rounded-lg border border-ink-200 bg-white px-4 py-3 mb-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+        <div className="text-xs text-ink-600">
+          Consultas al asistente: <span className="font-semibold text-ink-900">{usadas}</span> de{' '}
+          <span className="font-semibold text-ink-900">{total}</span> usadas hoy ·{' '}
+          <span className={`font-semibold ${restantes === 0 ? 'text-semaforo-rojo' : 'text-ink-900'}`}>
+            {restantes} {restantes === 1 ? 'restante' : 'restantes'}
+          </span>
+        </div>
+        <div className="text-[11px] text-ink-500">
+          Se renueva en <span className="font-medium text-ink-700">{tiempoRestante || '—'}</span>
+        </div>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-ink-100 overflow-hidden">
+        <div className={`h-full ${tone} transition-all`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function formatearCuentaRegresiva(isoReset) {
+  const reset = new Date(isoReset).getTime();
+  const ahora = Date.now();
+  const ms = Math.max(0, reset - ahora);
+  if (ms === 0) return '0 m';
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h > 0) return `${h} h ${m} m`;
+  return `${m} m`;
+}
+
+function EstadoVacio({ sugerencias, onPick, disabled }) {
   return (
     <div className="py-6 px-1 space-y-5">
       <div className="text-center px-6">
@@ -197,11 +311,11 @@ function EstadoVacio({ onPick, disabled }) {
           ¿En qué puedo ayudarle hoy?
         </div>
         <div className="text-xs text-ink-500 max-w-xl mx-auto mt-1">
-          Pregunte en lenguaje natural sobre el estado del semáforo, comparativas entre
-          empresas o tendencias por departamento. Seleccione cualquier sugerencia para empezar.
+          Pregunte en lenguaje natural sobre el estado del termómetro de clima, comparativas entre
+          empresas o tendencias por departamento. Las sugerencias se cargan al cuadro de texto para que pueda editarlas.
         </div>
       </div>
-      <SuggestionPills onPick={onPick} disabled={disabled} />
+      <SuggestionPills data={sugerencias} onPick={onPick} disabled={disabled} />
     </div>
   );
 }

@@ -4,10 +4,11 @@ const items = [
   { to: '/', label: 'Inicio', icon: '◇', end: true, hint: 'Resumen del período actual' },
   { to: '/asistente', label: 'Asistente IA', icon: '✦', hint: 'Consultas en lenguaje natural' },
   { to: '/comparador', label: 'Comparador', icon: '⇆', hint: 'Comparativa entre entidades' },
-  { to: '/semaforo', label: 'Semáforo', icon: '◉', hint: 'Departamentos por nivel de atención' },
+  { to: '/termometro', label: 'Termómetro de clima', icon: '◉', hint: 'Departamentos por nivel de atención' },
   { to: '/tendencias', label: 'Tendencias', icon: '⤴', hint: 'Evolución mensual y cronicidad' },
   { to: '/catalogo', label: 'Catálogo', icon: '☷', hint: 'Revisión de polaridad sugerida' },
-  { to: '/presentacion', label: 'Presentación', icon: '▤', hint: 'Generar informe .pptx editable' }
+  { to: '/presentacion', label: 'Presentación', icon: '▤', hint: 'Generar informe .pptx editable' },
+  { to: '/metodologia', label: 'Metodología', icon: 'ⓘ', hint: 'Cómo se calcula cada nivel' }
 ];
 
 export function Sidebar({ onCollapse }) {

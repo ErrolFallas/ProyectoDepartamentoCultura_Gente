@@ -121,7 +121,7 @@ export function PresentationPage() {
             <StatBadge
               label="Personal negativo"
               value={pct(preview.agregado.pct_negativo)}
-              hint="Si supera 75% activa ROJO"
+              hint="≥ 75% ROJO · ≥ 90% NEGRO (crisis)"
               tone={preview.agregado.pct_negativo >= 75 ? 'danger'
                 : preview.agregado.pct_negativo >= 40 ? 'warning' : 'positive'}
             />
@@ -137,7 +137,7 @@ export function PresentationPage() {
 
           <div className="rounded-lg border border-ink-200 bg-white divide-y divide-ink-100">
             <RowResumen
-              label="Nivel del semáforo"
+              label="Nivel del termómetro"
               value={<NivelPill nivel={preview.nivelSemaforo.nivel} />}
               hint={`Calculado a partir de ${pct(preview.nivelSemaforo.pct_negativo)} negativo`}
             />

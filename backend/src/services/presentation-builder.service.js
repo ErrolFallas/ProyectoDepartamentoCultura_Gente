@@ -17,6 +17,7 @@ const COLORS = {
   verde: '22C55E',
   amarillo: 'EAB308',
   rojo: 'EF4444',
+  negro: '0F172A',
   cardBg: 'FFFFFF'
 };
 
@@ -225,12 +226,14 @@ function construirNarrativa(datos) {
   if (datos.posicionRanking) {
     partes.push(`Ocupa la posición #${datos.posicionRanking.posicion} en el ranking global de ${datos.scope === 'COMPANY' ? 'empresas' : 'departamentos'}.`);
   }
-  if (datos.nivelSemaforo.nivel === 'ROJO') {
-    partes.push('El semáforo está en ROJO: se recomienda una visita de Cultura y Gente al equipo.');
+  if (datos.nivelSemaforo.nivel === 'NEGRO') {
+    partes.push('El termómetro de clima está en NEGRO (crisis): visita inmediata e intervención prioritaria de Cultura y Gente.');
+  } else if (datos.nivelSemaforo.nivel === 'ROJO') {
+    partes.push('El termómetro de clima está en ROJO: se recomienda una visita de Cultura y Gente al equipo.');
   } else if (datos.nivelSemaforo.nivel === 'AMARILLO') {
-    partes.push('El semáforo está en AMARILLO: mantener observación y comparar contra el período anterior.');
+    partes.push('El termómetro de clima está en AMARILLO: mantener observación y comparar contra el período anterior.');
   } else {
-    partes.push('El semáforo está en VERDE para el período analizado.');
+    partes.push('El termómetro de clima está en VERDE para el período analizado.');
   }
   return partes.join(' ');
 }
@@ -474,6 +477,7 @@ function tdStyle(extra = {}) {
 }
 
 function colorPorNivel(nivel) {
+  if (nivel === 'NEGRO') return COLORS.negro;
   if (nivel === 'ROJO') return COLORS.rojo;
   if (nivel === 'AMARILLO') return COLORS.amarillo;
   return COLORS.verde;

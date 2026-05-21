@@ -73,9 +73,9 @@ export const TOOLS = [
     declaration: {
       name: 'obtenerFocosDelPeriodo',
       description:
-        'Devuelve los departamentos con semáforo ROJO o AMARILLO en el ' +
+        'Devuelve los departamentos con termómetro NEGRO, ROJO o AMARILLO en el ' +
         'período indicado. Útil para "¿qué departamentos requieren atención?", ' +
-        '"focos rojos del mes", "alertas activas".',
+        '"focos críticos del mes", "alertas activas".',
       parameters: {
         type: 'OBJECT',
         properties: {
@@ -92,14 +92,14 @@ export const TOOLS = [
     declaration: {
       name: 'listarAlertas',
       description:
-        'Lista alertas del semáforo con filtros opcionales. Cada fila tiene ' +
-        'departamento, empresa, nivel (VERDE/AMARILLO/ROJO), porcentaje negativo ' +
+        'Lista alertas del termómetro de clima con filtros opcionales. Cada fila tiene ' +
+        'departamento, empresa, nivel (VERDE/AMARILLO/ROJO/NEGRO), porcentaje negativo ' +
         'y si fue atendida.',
       parameters: {
         type: 'OBJECT',
         properties: {
           periodo: { type: 'STRING', description: 'Período YYYY-MM. Omitir para mes actual.' },
-          nivel: { type: 'STRING', description: 'VERDE, AMARILLO o ROJO. Omitir para todos.' },
+          nivel: { type: 'STRING', description: 'VERDE, AMARILLO, ROJO o NEGRO. Omitir para todos.' },
           atendida: { type: 'BOOLEAN', description: 'true=ya atendida, false=pendiente. Omitir para todas.' }
         }
       }
@@ -120,7 +120,7 @@ export const TOOLS = [
       name: 'empresasConMasAlertas',
       description:
         'Cuenta cuántas alertas tiene cada empresa en el período, agrupado por ' +
-        'nivel. Útil para preguntas tipo "¿qué empresa tiene más semáforos rojos?", ' +
+        'nivel. Útil para preguntas tipo "¿qué empresa tiene más focos críticos?", ' +
         '"qué empresa requiere más atención", "cuál es la empresa con más focos".',
       parameters: {
         type: 'OBJECT',
@@ -128,7 +128,7 @@ export const TOOLS = [
           periodo: { type: 'STRING', description: 'Período YYYY-MM. Omitir para mes actual.' },
           nivel: {
             type: 'STRING',
-            description: 'Filtrar por nivel (ROJO, AMARILLO). Omitir para contar todas.'
+            description: 'Filtrar por nivel (NEGRO, ROJO, AMARILLO). Omitir para contar todas.'
           },
           top_n: { type: 'INTEGER', description: 'Cuántas empresas devolver. Por defecto 10.' }
         }
@@ -145,6 +145,7 @@ export const TOOLS = [
       }
       const [rows] = await pool.query(
         `SELECT c.id AS company_id, c.nombre AS empresa,
+                SUM(a.nivel = 'NEGRO')    AS negros,
                 SUM(a.nivel = 'ROJO')     AS rojos,
                 SUM(a.nivel = 'AMARILLO') AS amarillos,
                 SUM(a.nivel = 'VERDE')    AS verdes,
@@ -154,7 +155,7 @@ export const TOOLS = [
            JOIN companies   c ON c.id = d.company_id
           WHERE ${where.join(' AND ')}
           GROUP BY c.id, c.nombre
-          ORDER BY rojos DESC, amarillos DESC
+          ORDER BY negros DESC, rojos DESC, amarillos DESC
           LIMIT ?`,
         [...params, top]
       );
@@ -165,6 +166,7 @@ export const TOOLS = [
           posicion: i + 1,
           empresa: r.empresa,
           company_id: r.company_id,
+          negros: Number(r.negros),
           rojos: Number(r.rojos),
           amarillos: Number(r.amarillos),
           verdes: Number(r.verdes),
@@ -327,7 +329,7 @@ export const TOOLS = [
       name: 'obtenerCronicidad',
       description:
         'Determina si una entidad lleva varios meses consecutivos en ' +
-        'alerta (ROJO o AMARILLO). Devuelve cuántos meses lleva y si es ' +
+        'alerta (NEGRO, ROJO o AMARILLO). Devuelve cuántos meses lleva y si es ' +
         'considerada crónica (≥ 3 meses).',
       parameters: {
         type: 'OBJECT',
@@ -388,7 +390,7 @@ export const TOOLS = [
       name: 'listarDepartamentosCronicos',
       description:
         'Recorre todos los departamentos con alertas recientes y devuelve ' +
-        'aquellos que llevan 3 o más meses consecutivos en AMARILLO o ROJO. ' +
+        'aquellos que llevan 3 o más meses consecutivos en AMARILLO, ROJO o NEGRO. ' +
         'Ideal para preguntas tipo "¿hay departamentos crónicos?", "¿quién ' +
         'lleva varios meses con alerta?".',
       parameters: {
@@ -407,7 +409,7 @@ export const TOOLS = [
            FROM alerts a
            JOIN departments d ON d.id = a.department_id
            JOIN companies   c ON c.id = d.company_id
-          WHERE a.nivel IN ('ROJO','AMARILLO')`
+          WHERE a.nivel IN ('NEGRO','ROJO','AMARILLO')`
       );
       const cronicos = [];
       for (const r of rows) {
@@ -489,6 +491,7 @@ export const TOOLS = [
         umbrales: {
           semaforo_amarillo_min: env.SEMAFORO_AMARILLO_MIN,
           semaforo_rojo_min: env.SEMAFORO_ROJO_MIN,
+          semaforo_negro_min: env.SEMAFORO_NEGRO_MIN,
           minimo_respuestas_departamento: env.MIN_RESPUESTAS_DEPARTAMENTO,
           umbral_negativo_max: env.UMBRAL_NEGATIVO_MAX,
           umbral_neutro_max: env.UMBRAL_NEUTRO_MAX

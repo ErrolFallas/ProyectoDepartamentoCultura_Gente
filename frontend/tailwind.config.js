@@ -27,7 +27,8 @@ export default {
         semaforo: {
           verde: '#22c55e',
           amarillo: '#eab308',
-          rojo: '#ef4444'
+          rojo: '#ef4444',
+          negro: '#0f172a'
         }
       },
       fontFamily: {

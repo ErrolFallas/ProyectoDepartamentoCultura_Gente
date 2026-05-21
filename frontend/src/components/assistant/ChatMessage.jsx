@@ -25,12 +25,23 @@ export function ChatMessage({ message }) {
           {message.content && (
             <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
           )}
+          {!esUsuario && message.desdeCache && (
+            <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-brand-700 bg-brand-50 border border-brand-200 rounded-full px-2 py-0.5">
+              <span>⚡</span>
+              <span>
+                Acelerada por aprendizaje
+                {message.hitCount ? ` · respondida ${message.hitCount} ${message.hitCount === 1 ? 'vez' : 'veces'}` : ''}
+              </span>
+            </div>
+          )}
           {!esUsuario && message.toolCalls?.length > 0 && (
             <ToolCallDetails toolCalls={message.toolCalls} />
           )}
-          {!esUsuario && message.latenciaMs && (
+          {!esUsuario && message.latenciaMs != null && (
             <div className="mt-2 text-[10px] text-ink-400">
-              {Math.round(message.latenciaMs / 100) / 10}s · {message.modelo}
+              {message.desdeCache
+                ? `Respondida desde caché · sin gastar cuota · modelo original ${message.modelo ?? 'IA'}`
+                : `${Math.round(message.latenciaMs / 100) / 10}s · ${message.modelo}`}
             </div>
           )}
         </div>

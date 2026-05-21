@@ -9,6 +9,7 @@ const PERIODO_RX_MES = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 function clasificarNivel(pctNegativo) {
   if (pctNegativo === null || pctNegativo === undefined) return 'VERDE';
+  if (pctNegativo >= env.SEMAFORO_NEGRO_MIN) return 'NEGRO';
   if (pctNegativo >= env.SEMAFORO_ROJO_MIN) return 'ROJO';
   if (pctNegativo >= env.SEMAFORO_AMARILLO_MIN) return 'AMARILLO';
   return 'VERDE';
@@ -25,7 +26,7 @@ export async function recalculateAlerts({ periodo }) {
   }
 
   const departmentIds = await listScopeIdsConRespuestas({ scope: 'DEPARTMENT', periodo });
-  const resumen = { periodo, evaluados: departmentIds.length, omitidos: 0, niveles: { VERDE: 0, AMARILLO: 0, ROJO: 0 } };
+  const resumen = { periodo, evaluados: departmentIds.length, omitidos: 0, niveles: { VERDE: 0, AMARILLO: 0, ROJO: 0, NEGRO: 0 } };
 
   await withTransaction(async (conn) => {
     for (const deptId of departmentIds) {
@@ -69,9 +70,18 @@ export async function marcarAtendida({ alertId, usuarioId, notas }) {
  */
 export async function focosActuales({ periodo }) {
   const efectivo = periodo ?? mesActualUTC();
+  const negros = await alertsRepo.list({ periodo: efectivo, nivel: 'NEGRO' });
   const rojos = await alertsRepo.list({ periodo: efectivo, nivel: 'ROJO' });
   const amarillos = await alertsRepo.list({ periodo: efectivo, nivel: 'AMARILLO' });
-  return { periodo: efectivo, rojos, amarillos, total: rojos.length + amarillos.length };
+  const todasLasAlertas = await alertsRepo.list({ periodo: efectivo });
+  return {
+    periodo: efectivo,
+    negros,
+    rojos,
+    amarillos,
+    total: negros.length + rojos.length + amarillos.length,
+    totalDeptos: todasLasAlertas.length
+  };
 }
 
 function mesActualUTC() {

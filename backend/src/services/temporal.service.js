@@ -85,6 +85,7 @@ export async function cronicidad({ scope, scopeId, lookbackMonths = 12 }) {
 }
 
 function clasificarPorPctNeg(pctNeg) {
+  if (pctNeg >= env.SEMAFORO_NEGRO_MIN) return 'NEGRO';
   if (pctNeg >= env.SEMAFORO_ROJO_MIN) return 'ROJO';
   if (pctNeg >= env.SEMAFORO_AMARILLO_MIN) return 'AMARILLO';
   return 'VERDE';

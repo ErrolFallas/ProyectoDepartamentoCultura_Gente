@@ -16,7 +16,7 @@ export const alertsRepo = {
          JOIN departments d ON d.id = a.department_id
          JOIN companies c ON c.id = d.company_id
         ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
-        ORDER BY FIELD(a.nivel, 'ROJO', 'AMARILLO', 'VERDE'), a.pct_negativo DESC`,
+        ORDER BY FIELD(a.nivel, 'NEGRO', 'ROJO', 'AMARILLO', 'VERDE'), a.pct_negativo DESC`,
       params
     );
     return rows;

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { useApi } from '../hooks/useApi.js';
 import { PageHeader } from '../components/common/PageHeader.jsx';
@@ -31,7 +32,12 @@ export function AlertsPage() {
     setFeedback(null);
     try {
       const r = await api.recalculateAlerts(periodo);
-      setFeedback(`Semáforo recalculado: ${r.evaluados} evaluados (${r.niveles.ROJO} rojo, ${r.niveles.AMARILLO} amarillo, ${r.niveles.VERDE} verde, ${r.omitidos} omitidos por anonimato).`);
+      const niv = r.niveles ?? {};
+      setFeedback(
+        `Termómetro recalculado: ${r.evaluados} evaluados (` +
+        `${niv.NEGRO ?? 0} negro, ${niv.ROJO ?? 0} rojo, ${niv.AMARILLO ?? 0} amarillo, ${niv.VERDE ?? 0} verde, ` +
+        `${r.omitidos} omitidos por anonimato).`
+      );
       reload();
     } catch (e) {
       setFeedback(`Error: ${e.message}`);
@@ -53,11 +59,21 @@ export function AlertsPage() {
   return (
     <>
       <PageHeader
-        title="Semáforo de alertas por departamento"
-        description="Cada fila representa un equipo (👥) y su empresa (🏢). El nivel se calcula a partir del % de personal con tono negativo: VERDE (< 40%), AMARILLO (40–75%), ROJO (≥ 75% → requiere visita). Departamentos con muy pocas respuestas se omiten para proteger el anonimato."
+        title="Termómetro de clima por departamento"
+        description={
+          <>
+            Cada fila representa un equipo (👥) y su empresa (🏢). El nivel se calcula a partir del % de personal con tono negativo:{' '}
+            <span className="font-medium text-semaforo-verde">VERDE</span> (&lt; 40%),{' '}
+            <span className="font-medium text-yellow-700">AMARILLO</span> (40–74%),{' '}
+            <span className="font-medium text-semaforo-rojo">ROJO</span> (75–89%),{' '}
+            <span className="font-medium text-ink-900">NEGRO</span> (≥ 90% → crisis).{' '}
+            Departamentos con muy pocas respuestas se omiten para proteger el anonimato.{' '}
+            <Link to="/metodologia" className="text-brand-600 hover:underline">¿Cómo se calcula? Ver metodología →</Link>
+          </>
+        }
         actions={
           <button onClick={recalcular} className="btn-secondary" disabled={busy}>
-            {busy ? 'Recalculando…' : 'Recalcular semáforo'}
+            {busy ? 'Recalculando…' : 'Recalcular termómetro'}
           </button>
         }
       />
@@ -66,9 +82,10 @@ export function AlertsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <PeriodPicker value={periodo} onChange={setPeriodo} />
           <label className="block">
-            <span className="label">Nivel del semáforo</span>
+            <span className="label">Nivel del termómetro</span>
             <select className="input" value={nivel} onChange={(e) => setNivel(e.target.value)}>
               <option value="">Todos los niveles</option>
+              <option value="NEGRO">Solo NEGRO (crisis · visita inmediata)</option>
               <option value="ROJO">Solo ROJO (intervención urgente)</option>
               <option value="AMARILLO">Solo AMARILLO (observación)</option>
               <option value="VERDE">Solo VERDE (estable)</option>
@@ -101,7 +118,7 @@ export function AlertsPage() {
       ) : (
         <EmptyState
           title="Sin alertas para los filtros actuales"
-          description="Si esperaba ver alertas, oprima Recalcular semáforo para reprocesar el período seleccionado."
+          description="Si esperaba ver alertas, oprima Recalcular termómetro para reprocesar el período seleccionado."
         />
       ))}
     </>

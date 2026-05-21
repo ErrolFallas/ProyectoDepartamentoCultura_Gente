@@ -21,13 +21,22 @@ export function currentPeriodMonth() {
 }
 
 export function nivelColor(nivel) {
+  if (nivel === 'NEGRO') return 'bg-semaforo-negro text-white';
   if (nivel === 'ROJO') return 'bg-semaforo-rojo text-white';
   if (nivel === 'AMARILLO') return 'bg-semaforo-amarillo text-ink-900';
   return 'bg-semaforo-verde text-white';
 }
 
 export function nivelDot(nivel) {
+  if (nivel === 'NEGRO') return 'bg-semaforo-negro';
   if (nivel === 'ROJO') return 'bg-semaforo-rojo';
   if (nivel === 'AMARILLO') return 'bg-semaforo-amarillo';
   return 'bg-semaforo-verde';
+}
+
+export function nivelLabel(nivel) {
+  if (nivel === 'NEGRO') return 'CRÍTICO';
+  if (nivel === 'ROJO') return 'ALTO';
+  if (nivel === 'AMARILLO') return 'MEDIO';
+  return 'ESTABLE';
 }

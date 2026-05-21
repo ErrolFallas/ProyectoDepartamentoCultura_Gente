@@ -66,7 +66,8 @@ incluido. Si querés capacidades completas, conseguí las siguientes:
 Usada para: clasificar polaridad de preguntas nuevas y analizar el tono de
 respuestas de texto abierto.
 
-- **Dónde obtenerla:** Google AI Studio → <https://aistudio.google.com/app/apikey>
+- **Dónde obtenerla:** Google AI Studio → <
+>
 - **Tier gratuito:** sí, suficiente para esta carga
 - **Variable en `.env`:** `GEMINI_API_KEY=`
 - **Modelo configurable:** `GEMINI_MODEL=gemini-1.5-flash` (o `gemini-2.5-flash` si tu cuenta lo soporta — la misma key funciona)

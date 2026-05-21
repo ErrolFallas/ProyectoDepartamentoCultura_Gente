@@ -8,6 +8,8 @@ const router = Router();
 router.use(requireAuth);
 
 router.get('/capabilities', assistantController.capabilities);
+router.get('/quota', assistantController.quota);
+router.get('/suggestions', assistantController.suggestions);
 router.post('/ask', validate({ body: askSchema }), assistantController.ask);
 
 export default router;

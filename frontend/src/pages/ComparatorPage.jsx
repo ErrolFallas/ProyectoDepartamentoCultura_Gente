@@ -153,6 +153,7 @@ export function ComparatorPage() {
                 )}
                 <div className={`text-2xl font-bold mt-1 ${
                   r.anonimato_protegido ? 'text-ink-400'
+                    : r.pct_negativo >= 90 ? 'text-semaforo-negro'
                     : r.pct_negativo >= 75 ? 'text-semaforo-rojo'
                     : r.pct_negativo >= 40 ? 'text-yellow-600' : 'text-semaforo-verde'
                 }`}>

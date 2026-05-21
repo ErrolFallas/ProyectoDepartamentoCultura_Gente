@@ -120,6 +120,8 @@ export const api = {
 
   // Asistente IA (Gemini con function calling)
   assistantCapabilities: () => request('/assistant/capabilities'),
+  assistantQuota: () => request('/assistant/quota'),
+  assistantSuggestions: () => request('/assistant/suggestions'),
   assistantAsk: (messages) => request('/assistant/ask', { method: 'POST', body: { messages } }),
 
   // Presentación (Fase 6)

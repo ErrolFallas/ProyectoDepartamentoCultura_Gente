@@ -1,76 +1,113 @@
 /**
- * Sugerencias agrupadas por categoría. Cada tarjeta de categoría tiene
- * un título y un set de preguntas ejemplo en formato pill clickeable.
+ * Sugerencias agrupadas por categoría. Cada pill, al hacer clic, llena el
+ * input del chat con su texto (no envía directo) para que el usuario pueda
+ * editar los placeholders entre paréntesis antes de enviar.
  *
- * Diseñado para el estado vacío del chat: el usuario ve de un vistazo
- * "¿qué tipo de cosas le puedo preguntar?" sin pensar en comandos.
+ * Las plantillas vienen del backend (/assistant/suggestions) y se acompañan
+ * de una sección dinámica "Preguntas frecuentes" que muestra las top N
+ * preguntas reales más usadas (las que el caché ya respondió varias veces).
  */
 
-const CATEGORIAS = [
-  {
-    titulo: 'Estado actual del semáforo',
-    icono: '◉',
-    descripcion: 'Identifique qué equipos requieren atención inmediata',
-    preguntas: [
-      '¿Qué empresa tiene la mayor cantidad de semáforos rojos este mes?',
-      '¿Cuántos departamentos están en rojo y a qué empresas pertenecen?',
-      '¿Hay focos de atención en este período?'
-    ]
-  },
-  {
-    titulo: 'Métricas y comparativas',
-    icono: '⇆',
-    descripcion: 'Compare entidades o consulte cifras específicas',
-    preguntas: [
-      '¿Cómo están los porcentajes de GGDI este mes?',
-      'Compare GGDI y AVON en este período',
-      '¿Cuál es el ranking de empresas por % positivo?'
-    ]
-  },
-  {
-    titulo: 'Análisis temporal',
-    icono: '⤴',
-    descripcion: 'Tendencias, cronicidad y patrones por día',
-    preguntas: [
-      '¿Hay algún departamento con alerta crónica?',
-      '¿En qué día de la semana se concentran las emociones negativas?',
-      '¿Cómo evolucionó GGDI en los últimos meses?'
-    ]
+export function SuggestionPills({ data, onPick, disabled }) {
+  if (!data) {
+    return (
+      <div className="text-center text-xs text-ink-500 py-4">
+        Cargando sugerencias…
+      </div>
+    );
   }
-];
 
-export function SuggestionPills({ onPick, disabled }) {
+  const { plantillas, frecuentes } = data;
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-      {CATEGORIAS.map((cat) => (
-        <div
-          key={cat.titulo}
-          className="rounded-lg border border-ink-200 bg-white p-4 flex flex-col"
-        >
-          <div className="flex items-start gap-2 mb-1">
-            <span className="text-brand-600 text-lg leading-none mt-0.5">{cat.icono}</span>
+    <div className="space-y-4">
+      {frecuentes?.length > 0 && (
+        <div className="rounded-lg border border-brand-200 bg-brand-50/60 p-4">
+          <div className="flex items-start gap-2 mb-2">
+            <span className="text-brand-600 text-lg leading-none mt-0.5">⚡</span>
             <div>
-              <div className="text-sm font-semibold text-ink-800">{cat.titulo}</div>
-              <div className="text-[11px] text-ink-500">{cat.descripcion}</div>
+              <div className="text-sm font-semibold text-brand-700">Preguntas frecuentes</div>
+              <div className="text-[11px] text-ink-600">
+                Estas vienen del caché — la respuesta es instantánea y no descuenta cuota.
+              </div>
             </div>
           </div>
-          <div className="mt-2 flex flex-col gap-1.5">
-            {cat.preguntas.map((p) => (
-              <button
-                key={p}
+          <div className="flex flex-col gap-1.5">
+            {frecuentes.map((p) => (
+              <PillButton
+                key={p.texto}
                 disabled={disabled}
-                onClick={() => onPick(p)}
-                className="text-left text-xs text-ink-700 bg-ink-50 hover:bg-brand-50
-                           hover:text-brand-700 border border-transparent
-                           hover:border-brand-200 rounded-md px-2.5 py-1.5
-                           transition disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => onPick(p.texto)}
+                etiqueta={`${p.hits} ${p.hits === 1 ? 'vez' : 'veces'}`}
+                tone="frecuente"
               >
-                {p}
-              </button>
+                {p.texto}
+              </PillButton>
             ))}
           </div>
         </div>
-      ))}
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {plantillas.map((cat) => (
+          <div
+            key={cat.categoria}
+            className="rounded-lg border border-ink-200 bg-white p-4 flex flex-col"
+          >
+            <div className="flex items-start gap-2 mb-2">
+              <span className="text-brand-600 text-lg leading-none mt-0.5">{cat.icono}</span>
+              <div>
+                <div className="text-sm font-semibold text-ink-800">{cat.categoria}</div>
+                <div className="text-[11px] text-ink-500">{cat.descripcion}</div>
+              </div>
+            </div>
+            <div className="mt-1 flex flex-col gap-1.5">
+              {cat.plantillas.map((p) => (
+                <PillButton
+                  key={p.texto}
+                  disabled={disabled}
+                  onClick={() => onPick(p.texto)}
+                  etiqueta={p.editable ? 'editar' : null}
+                  tone="plantilla"
+                >
+                  {p.texto}
+                </PillButton>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="text-[11px] text-ink-500 text-center">
+        Las sugerencias <strong>cargan al cuadro de texto</strong> al hacer clic — revíselas, reemplace lo que esté en (paréntesis) y presione Enviar.
+      </div>
     </div>
+  );
+}
+
+function PillButton({ children, disabled, onClick, etiqueta, tone }) {
+  const tones = {
+    plantilla: 'text-ink-700 bg-ink-50 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200',
+    frecuente: 'text-brand-800 bg-white hover:bg-brand-100 hover:border-brand-300'
+  };
+  const etiquetaTone = etiqueta === 'editar'
+    ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
+    : 'bg-brand-100 text-brand-700 border-brand-300';
+
+  return (
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      className={`text-left text-xs border border-transparent rounded-md px-2.5 py-1.5
+                 transition disabled:opacity-50 disabled:cursor-not-allowed
+                 flex items-center justify-between gap-2 ${tones[tone]}`}
+    >
+      <span className="flex-1">{children}</span>
+      {etiqueta && (
+        <span className={`text-[10px] uppercase tracking-wider border rounded px-1 py-0.5 ${etiquetaTone}`}>
+          {etiqueta}
+        </span>
+      )}
+    </button>
   );
 }

@@ -95,7 +95,13 @@ async function obtenerNivelSemaforo({ scope, scopeId, periodo, pctNegativo }) {
   // Fallback: calcular usando umbrales
   if (pctNegativo === null || pctNegativo === undefined) return { nivel: 'VERDE', pct_negativo: 0 };
   const v = Number(pctNegativo);
-  const nivel = v >= env.SEMAFORO_ROJO_MIN ? 'ROJO' : v >= env.SEMAFORO_AMARILLO_MIN ? 'AMARILLO' : 'VERDE';
+  const nivel = v >= env.SEMAFORO_NEGRO_MIN
+    ? 'NEGRO'
+    : v >= env.SEMAFORO_ROJO_MIN
+      ? 'ROJO'
+      : v >= env.SEMAFORO_AMARILLO_MIN
+        ? 'AMARILLO'
+        : 'VERDE';
   return { nivel, pct_negativo: v };
 }
 

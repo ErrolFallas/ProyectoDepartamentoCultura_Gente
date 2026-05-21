@@ -30,11 +30,13 @@ const CFG = {
   noiseRate: 0.2
 };
 
-const COMPANIES = ['GGDI', 'AVON'];
+const COMPANIES = ['GGDI', 'AVON', 'NOVAR', 'LANCO'];
 
 const DEPARTMENTS_BY_COMPANY = {
   GGDI: ['Operaciones', 'Tecnología', 'Comercial', 'Recursos Humanos', 'Finanzas', 'Logística'],
-  AVON: ['Operaciones', 'Tecnología', 'Comercial', 'Recursos Humanos', 'Mercadeo']
+  AVON: ['Operaciones', 'Tecnología', 'Comercial', 'Recursos Humanos', 'Mercadeo'],
+  NOVAR: ['Operaciones', 'Tecnología', 'Calidad', 'Recursos Humanos', 'Investigación'],
+  LANCO: ['Producción', 'Comercial', 'Recursos Humanos', 'Finanzas', 'Servicio al Cliente']
 };
 
 const TEXTOS_POSITIVOS = [
@@ -139,18 +141,32 @@ async function main() {
 function perfilEstres({ company, department, monthsAgo }) {
   const key = `${company}:${department}`;
   switch (key) {
-    case 'GGDI:Finanzas':       return clamp(0.84 + jitter(0.04));
-    case 'AVON:Comercial':      return clamp(0.16 + jitter(0.06));
-    case 'GGDI:Operaciones':    return clamp(0.70 - monthsAgo * 0.10 + jitter(0.06));
-    case 'AVON:Mercadeo':       return clamp(0.55 + jitter(0.15));
-    case 'GGDI:Tecnología':     return clamp(0.30 + jitter(0.10));
-    case 'AVON:Tecnología':     return clamp(0.40 + jitter(0.12));
+    // GGDI
+    case 'GGDI:Finanzas':         return clamp(0.95 + jitter(0.02));  // NEGRO crónico
+    case 'GGDI:Operaciones':      return clamp(0.70 + monthsAgo * 0.04 + jitter(0.06)); // deterioro hacia el presente (los 8m varían)
+    case 'GGDI:Tecnología':       return clamp(0.30 + jitter(0.10));
     case 'GGDI:Recursos Humanos': return clamp(0.25 + jitter(0.08));
+    case 'GGDI:Comercial':        return clamp(0.45 + jitter(0.15));
+    case 'GGDI:Logística':        return clamp(0.50 + jitter(0.15));
+    // AVON
+    case 'AVON:Comercial':        return clamp(0.16 + jitter(0.06));
+    case 'AVON:Mercadeo':         return clamp(0.78 + jitter(0.10));  // ROJO estable
+    case 'AVON:Tecnología':       return clamp(0.40 + jitter(0.12));
     case 'AVON:Recursos Humanos': return clamp(0.35 + jitter(0.10));
-    case 'GGDI:Comercial':      return clamp(0.45 + jitter(0.15));
-    case 'GGDI:Logística':      return clamp(0.50 + jitter(0.15));
-    case 'AVON:Operaciones':    return clamp(0.42 + jitter(0.12));
-    default:                    return clamp(0.45 + jitter(0.20));
+    case 'AVON:Operaciones':      return clamp(0.42 + jitter(0.12));
+    // NOVAR — empresa con crisis emergente
+    case 'NOVAR:Calidad':         return clamp(0.92 + jitter(0.03));  // NEGRO consistente
+    case 'NOVAR:Operaciones':     return clamp(0.55 + monthsAgo * 0.05 + jitter(0.08));
+    case 'NOVAR:Tecnología':      return clamp(0.20 + jitter(0.10));  // muy VERDE
+    case 'NOVAR:Recursos Humanos': return clamp(0.50 + jitter(0.12));
+    case 'NOVAR:Investigación':   return clamp(0.28 + jitter(0.08));
+    // LANCO — empresa generalmente sana con un foco rojo
+    case 'LANCO:Servicio al Cliente': return clamp(0.92 + jitter(0.03)); // NEGRO sostenido
+    case 'LANCO:Producción':      return clamp(0.62 + jitter(0.05));  // ROJO consistente
+    case 'LANCO:Comercial':       return clamp(0.30 + jitter(0.10));
+    case 'LANCO:Recursos Humanos': return clamp(0.20 + jitter(0.08));
+    case 'LANCO:Finanzas':        return clamp(0.65 + jitter(0.18));  // mezcla → AMARILLO
+    default:                      return clamp(0.45 + jitter(0.20));
   }
 }
 

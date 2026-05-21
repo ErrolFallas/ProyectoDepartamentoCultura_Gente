@@ -35,7 +35,10 @@ const schema = z.object({
   UMBRAL_NEGATIVO_MAX: z.coerce.number().min(0).max(100).default(40),
   UMBRAL_NEUTRO_MAX: z.coerce.number().min(0).max(100).default(60),
   SEMAFORO_AMARILLO_MIN: z.coerce.number().min(0).max(100).default(40),
-  SEMAFORO_ROJO_MIN: z.coerce.number().min(0).max(100).default(75)
+  SEMAFORO_ROJO_MIN: z.coerce.number().min(0).max(100).default(75),
+  SEMAFORO_NEGRO_MIN: z.coerce.number().min(0).max(100).default(90),
+  ASSISTANT_DAILY_QUOTA: z.coerce.number().int().min(1).max(1000).default(20),
+  ASSISTANT_CACHE_TTL_MIN: z.coerce.number().int().min(1).max(1440).default(60)
 });
 
 const parsed = schema.safeParse(process.env);

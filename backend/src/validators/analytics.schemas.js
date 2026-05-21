@@ -40,7 +40,7 @@ export const rankingQuery = z.object({
 
 export const alertsListQuery = z.object({
   periodo: periodoMes.optional(),
-  nivel: z.enum(['VERDE', 'AMARILLO', 'ROJO']).optional(),
+  nivel: z.enum(['VERDE', 'AMARILLO', 'ROJO', 'NEGRO']).optional(),
   atendida: z.enum(['true', 'false']).optional()
 });
 

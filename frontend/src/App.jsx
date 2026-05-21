@@ -10,6 +10,7 @@ import { TrendsPage } from './pages/TrendsPage.jsx';
 import { CatalogPage } from './pages/CatalogPage.jsx';
 import { PresentationPage } from './pages/PresentationPage.jsx';
 import { AssistantPage } from './pages/AssistantPage.jsx';
+import { MetodologiaPage } from './pages/MetodologiaPage.jsx';
 
 export default function App() {
   return (
@@ -26,11 +27,13 @@ export default function App() {
           >
             <Route index element={<DashboardPage />} />
             <Route path="comparador" element={<ComparatorPage />} />
-            <Route path="semaforo" element={<AlertsPage />} />
+            <Route path="termometro" element={<AlertsPage />} />
+            <Route path="semaforo" element={<Navigate to="/termometro" replace />} />
             <Route path="tendencias" element={<TrendsPage />} />
             <Route path="catalogo" element={<CatalogPage />} />
             <Route path="presentacion" element={<PresentationPage />} />
             <Route path="asistente" element={<AssistantPage />} />
+            <Route path="metodologia" element={<MetodologiaPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
